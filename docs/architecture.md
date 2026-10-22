@@ -78,7 +78,25 @@ Cline با Tauri ساخته می‌شود. `build-rtl.sh --from-installed` نس�
 می‌سازد. این مسیر به Bun، Rust، Xcode CLT و شبکه نیاز دارد و طولانی است.
 خروجی پیش‌فرض `$HOME/Applications/Cline RTL.app` است.
 
-### ۷. dylib / WebKit (GitHub Copilot)
+### ۷. Electron unpacked (Cursor)
+
+Cursor فایل `app.asar` ندارد؛ کل برنامهٔ renderer به‌صورت باز در
+`Contents/Resources/app` است. مراحل:
+
+1. کپی برنامهٔ اصلی به `Cursor-RTL.app` (حالت پیش‌فرض).
+2. افزودن `rtl-fa.css`، `rtl-fa.js` و فونت‌های Vazirmatn کنار
+   `workbench.html` و تزریق دو تگ `<link>`/`<script>`.
+3. به‌روزرسانی چک‌سام `workbench.html` در `product.json` و خالی‌کردن
+   `updateUrl`/`backupUpdateUrl` تا آپدیت رسمی پچ را بازنویسی نکند.
+4. تغییر `CFBundleIdentifier` به `...rtl` و `CFBundleDisplayName` به
+   `Cursor-RTL`؛ `CFBundleName` عمداً `Cursor` می‌ماند تا Electron هلپرها
+   را پیدا کند (به همین دلیل پروفایل مشترک است).
+5. امضای ad-hoc **بدون** hardened runtime: حفظ `flags,runtime` باعث می‌شود
+   Library Validation فریم‌ورک‌ها را به‌خاطر Team ID متفاوت رد کند و برنامه
+   در استارت با خطای dyld بمیرد؛ پس فقط entitlements حفظ می‌شود
+   (`flags=0x2(adhoc)`).
+
+### ۸. dylib / WebKit (GitHub Copilot)
 
 GitHub Copilot تنها هارنس درجا است. یک dylib به WebKit تزریق می‌شود تا
 renderer را در سطح فریم‌ورک RTL کند. این روش به معماری arm64 وابسته است؛

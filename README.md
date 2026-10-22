@@ -45,6 +45,7 @@ CLI بدون وابستگی، ساخت و تأیید را هماهنگ می‌ک
 | [Xiaomi MiMo AI](harnesses/xiaomi-mimo/README.md) | `xiaomi-mimo` | `/Applications/Xiaomi MiMo AI.app` | `/Applications/Xiaomi MiMo AI-RTL.app` | `electron-asar` | مشترک |
 | [GitHub Copilot](harnesses/github-copilot/README.md) | `github-copilot` | `/Applications/GitHub Copilot.app` | `/Applications/GitHub Copilot.app` | `webkit-dylib` | مشترک |
 | [Claude Desktop](harnesses/claude-desktop/README.md) | `claude-desktop` | `/Applications/Claude.app` | `$HOME/Applications/Claude-RTL.app` | `electron-asar` | مشترک |
+| [Cursor](harnesses/cursor/README.md) | `cursor` | `/Applications/Cursor.app` | `/Applications/Cursor-RTL.app` | `electron-unpacked` | مشترک |
 
 نسخه‌های مستند و آخرین تأیید در `manifest.json` و README هر هارنس ثبت شده‌اند.
 نسخهٔ نصب‌شدهٔ شما ممکن است جدیدتر باشد؛ `./rtl-harness detect` این اختلاف را

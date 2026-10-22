@@ -345,6 +345,29 @@
       "restore": null,
       "docs": "harnesses/claude-desktop/README.md",
       "notes": "حالت پیش‌فرض کپی به ~/Applications/Claude-RTL.app است؛ --install درجا است و پیش‌فرض نیست."
+    },
+    {
+      "slug": "cursor",
+      "name": "Cursor",
+      "vendor": "Anysphere",
+      "appPath": "/Applications/Cursor.app",
+      "appBundleId": "com.todesktop.230313mzl4w4u92",
+      "outputBundleId": "com.todesktop.230313mzl4w4u92.rtl",
+      "outputPath": "/Applications/Cursor-RTL.app",
+      "additionalOutputs": [],
+      "method": "electron-unpacked",
+      "profile": "shared",
+      "inPlace": false,
+      "requires": ["bash", "node", "python3", "ditto", "codesign", "plutil"],
+      "testedVersion": "3.26.16",
+      "lastVerifiedVersion": null,
+      "cwd": "harnesses/cursor",
+      "entry": ["bash", "patch-cursor-rtl.sh"],
+      "verify": ["bash", "-n", "patch-cursor-rtl.sh"],
+      "tests": ["node", "--test", "tests/rtl.test.mjs"],
+      "restore": null,
+      "docs": "harnesses/cursor/README.md",
+      "notes": "پروفایل ~/Library/Application Support/Cursor مشترک است؛ هم‌زمان با Cursor اصلی اجرا نکنید. آپدیت خودکار خاموش می‌شود."
     }
   ]
 }

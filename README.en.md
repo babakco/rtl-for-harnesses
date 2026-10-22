@@ -36,6 +36,7 @@ Repository: <https://github.com/babakco/rtl-for-harnesses>
 | [Xiaomi MiMo AI](harnesses/xiaomi-mimo/README.md) | `xiaomi-mimo` | `/Applications/Xiaomi MiMo AI.app` | `/Applications/Xiaomi MiMo AI-RTL.app` | `electron-asar` | shared |
 | [GitHub Copilot](harnesses/github-copilot/README.md) | `github-copilot` | `/Applications/GitHub Copilot.app` | `/Applications/GitHub Copilot.app` | `webkit-dylib` | shared |
 | [Claude Desktop](harnesses/claude-desktop/README.md) | `claude-desktop` | `/Applications/Claude.app` | `$HOME/Applications/Claude-RTL.app` | `electron-asar` | shared |
+| [Cursor](harnesses/cursor/README.md) | `cursor` | `/Applications/Cursor.app` | `/Applications/Cursor-RTL.app` | `electron-unpacked` | shared |
 
 Documented versions and the last verification are recorded in `manifest.json`
 and each harness README. Your installed version may be newer; run

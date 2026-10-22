@@ -1,0 +1,131 @@
+/* Cursor-RTL patch v1.0 — Vazirmatn + paragraph-level RTL
+ * Cursor 3.26.x
+ *
+ * پوشش: پیام‌های چت/ایجنت، حباب کاربر، ورودی ProseMirror و
+ * پیش‌نمایش/ادیتور Markdown.
+ * کد، Monaco، ترمینال و فرمول همیشه LTR و monospace می‌مانند.
+ */
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/vazirmatn-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/vazirmatn-medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/vazirmatn-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* هر پاراگراف/بلوکی که حتی یک حرف فارسی دارد — حتی با شروع انگلیسی */
+.cursor-rtl-fa {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: embed !important;
+  font-family: "Vazirmatn", "IRANSans", "Segoe UI", Tahoma, sans-serif !important;
+  line-height: 1.9 !important;
+  letter-spacing: 0 !important;
+}
+
+/* لیست‌ها: مارکر/شماره سمت راست */
+ul:has(> li.cursor-rtl-fa),
+ol:has(> li.cursor-rtl-fa) {
+  direction: rtl !important;
+  text-align: right !important;
+  padding-left: 0 !important;
+  padding-right: 1.5rem !important;
+}
+
+/* نقل‌قول: لبه به سمت راست */
+blockquote.cursor-rtl-fa {
+  border-left: 0 !important;
+  border-right: 3px solid var(--vscode-textBlockQuote-border, currentColor) !important;
+  padding-left: 0 !important;
+  padding-right: 1rem !important;
+}
+
+/* جدول‌هایی که سلول فارسی دارند */
+table:has(td.cursor-rtl-fa, th.cursor-rtl-fa) {
+  direction: rtl !important;
+}
+
+/* کد inline داخل پاراگراف فارسی: LTR و جدا از متن */
+.cursor-rtl-fa code,
+.cursor-rtl-fa kbd,
+.cursor-rtl-fa samp,
+.cursor-rtl-fa tt,
+.cursor-rtl-fa pre,
+.cursor-rtl-fa .chat-code-block,
+.cursor-rtl-fa .chat-code-block-header,
+.cursor-rtl-fa .markdown-code-block,
+.cursor-rtl-fa [data-markdown-code-block] {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  line-height: 1.6 !important;
+}
+
+/* فرمول‌ها و ترمینال هرگز آینه نمی‌شوند */
+.cursor-rtl-fa .katex,
+.cursor-rtl-fa .math,
+.cursor-rtl-fa .monaco-editor,
+.cursor-rtl-fa .view-lines,
+.cursor-rtl-fa .xterm,
+.cursor-rtl-fa .terminal {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left !important;
+}
+
+/* لینک‌های فنی داخل متن فارسی: جهت متن را خراب نکنند */
+.cursor-rtl-fa a {
+  unicode-bidi: isolate;
+}
+
+/* ---- ورودی‌ها (کانتینر پایدار) ----
+   ProseMirror نودهای داخلی پاراگراف را بازسازی می‌کند، پس علامت روی خود
+   کانتینر می‌نشیند و این قوانین آبشاری جهت/فونت را به محتوای تایپ‌شده
+   می‌دهند. کد inline، منشن‌ها و چیپ‌ها داخل ورودی LTR می‌مانند. */
+.cursor-rtl-input {
+  direction: rtl !important;
+  unicode-bidi: embed !important;
+}
+.cursor-rtl-input p,
+.cursor-rtl-input li,
+.cursor-rtl-input h1,
+.cursor-rtl-input h2,
+.cursor-rtl-input h3,
+.cursor-rtl-input h4,
+.cursor-rtl-input blockquote,
+.cursor-rtl-input td,
+.cursor-rtl-input th,
+textarea.cursor-rtl-input {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: embed !important;
+  font-family: "Vazirmatn", "IRANSans", "Segoe UI", Tahoma, sans-serif !important;
+  line-height: 1.9 !important;
+  letter-spacing: 0 !important;
+}
+.cursor-rtl-input code,
+.cursor-rtl-input kbd,
+.cursor-rtl-input samp,
+.cursor-rtl-input tt,
+.cursor-rtl-input pre,
+.cursor-rtl-input a[href],
+.cursor-rtl-input [data-editor-inline-token] {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left !important;
+}

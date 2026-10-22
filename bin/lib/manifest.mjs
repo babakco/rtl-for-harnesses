@@ -10,6 +10,7 @@ const METHODS = new Set([
   "electron-asar-preload",
   "electron-asar-surgical",
   "electron-asar-framework",
+  "electron-unpacked",
   "tauri-source",
   "native-source-rust",
   "webkit-dylib",

@@ -10,11 +10,24 @@ import { formatTable } from "../bin/lib/format.mjs";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-test("manifest contains all 15 harnesses", () => {
+test("manifest contains all 16 harnesses", () => {
   const manifest = loadManifest(root);
   assert.equal(manifest.schemaVersion, 1);
-  assert.equal(manifest.harnesses.length, 15);
-  assert.equal(new Set(manifest.harnesses.map((h) => h.slug)).size, 15);
+  assert.equal(manifest.harnesses.length, 16);
+  assert.equal(new Set(manifest.harnesses.map((h) => h.slug)).size, 16);
+});
+
+test("manifest includes Cursor as an unpacked Electron harness", () => {
+  const manifest = loadManifest(root);
+  const entry = getEntry(manifest, "cursor");
+
+  assert.equal(entry.appPath, "/Applications/Cursor.app");
+  assert.equal(entry.appBundleId, "com.todesktop.230313mzl4w4u92");
+  assert.equal(entry.outputPath, "/Applications/Cursor-RTL.app");
+  assert.equal(entry.outputBundleId, "com.todesktop.230313mzl4w4u92.rtl");
+  assert.equal(entry.method, "electron-unpacked");
+  assert.equal(entry.profile, "shared");
+  assert.equal(entry.inPlace, false);
 });
 
 test("getEntry rejects an unknown slug", () => {

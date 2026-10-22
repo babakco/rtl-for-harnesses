@@ -21,6 +21,7 @@
 | 13 | Xiaomi MiMo AI | `xiaomi-mimo` | `/Applications/Xiaomi MiMo AI.app` | `/Applications/Xiaomi MiMo AI-RTL.app` | `electron-asar` | `26.922.222056` | مشترک | متوسط |
 | 14 | GitHub Copilot | `github-copilot` | `/Applications/GitHub Copilot.app` | همان برنامه (درجا) | `webkit-dylib` | `1.1.15` | مشترک / درجا | بالا |
 | 15 | Claude Desktop | `claude-desktop` | `/Applications/Claude.app` | `$HOME/Applications/Claude-RTL.app` | `electron-asar` | `3.1623.0` | مشترک | متوسط |
+| 16 | Cursor | `cursor` | `/Applications/Cursor.app` | `/Applications/Cursor-RTL.app` | `electron-unpacked` | `3.26.16` | مشترک | متوسط |
 
 ## شناسه‌های bundle
 
@@ -41,6 +42,7 @@
 | Xiaomi MiMo AI | `com.xiaomi.mimo.desktop-ai` | `com.xiaomi.mimo.desktop-ai` |
 | GitHub Copilot | `com.github.githubapp` | `com.github.githubapp` |
 | Claude Desktop | `com.anthropic.claudefordesktop` | `com.anthropic.claudefordesktop` |
+| Cursor | `com.todesktop.230313mzl4w4u92` | `com.todesktop.230313mzl4w4u92.rtl` |
 
 ## تفسیر ریسک
 
@@ -55,8 +57,9 @@
 یعنی در این مخزن دوباره build/verify نشده است؛ این به معنی خراب بودن نیست،
 فقط یعنی شواهد این مخزن آن را تأیید نکرده. در این بازبینی، ZCode با نسخهٔ
 `3.16.2` و Qoder با نسخهٔ `0.4.9` در حالت کپی build و verify شدند؛ بقیهٔ ۱۳
-خروجی فقط read-only تأیید شدند. نتیجهٔ کامل در
-[`verification.md`](verification.md) است.
+خروجی فقط read-only تأیید شدند. سپس Cursor با نسخهٔ `3.26.16` در حالت
+کپی build، verify و smoke-test اجرایی شد (launch واقعی + راستی‌آزمایی RTL در
+DOM). نتیجهٔ کامل در [`verification.md`](verification.md) است.
 
 ---
 
