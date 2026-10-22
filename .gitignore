@@ -1,0 +1,44 @@
+# macOS
+.DS_Store
+._*
+
+# Logs and temporary files
+*.log
+*.bak
+*.backup
+*.tmp
+
+# Dependencies and build output
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+build/
+dist/
+target/
+stage/
+
+# Personal scratch file (must never be committed)
+Harness-RTL-Project-List.txt
+
+# Credentials and private material
+.env
+.env.*
+auth.json
+credentials*
+*.pem
+*.p12
+*.key
+id_rsa*
+*.kdbx
+
+# Agent and editor artifacts
+.omo/
+.serena/
+.superpowers/
+.opencode/
+.openclaude/
+.codegraph/
+.worktrees/
+.workbuddy-ai/
+.freebuff/
