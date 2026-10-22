@@ -19,11 +19,31 @@ const TEXT_EXTENSIONS = new Set([
   ".mjs",
   ".js",
   ".cjs",
+  ".m",
+  ".mm",
+  ".h",
+  ".c",
+  ".cc",
+  ".cpp",
+  ".hpp",
+  ".rs",
+  ".swift",
+  ".java",
+  ".go",
+  ".rb",
+  ".php",
   ".sh",
+  ".patch",
+  ".diff",
+  ".conf",
+  ".ini",
+  ".cfg",
+  ".service",
   ".txt",
   ".yml",
   ".yaml",
   ".css",
+  ".scss",
   ".html",
   ".py",
   ".ts",
@@ -235,7 +255,10 @@ function checkStaged(root, errors, hits) {
       errors.push(`forbidden ${forbidden.type}: ${rel}`);
       continue;
     }
-    const show = git(root, ["show", `:${rel}`]);
+    const show = spawnSync("git", ["show", `:${rel}`], {
+      cwd: root,
+      maxBuffer: MAX_FILE_BYTES + 1024 * 1024,
+    });
     if (show.status !== 0) {
       errors.push(`cannot read staged file: ${rel}`);
       continue;
@@ -245,7 +268,7 @@ function checkStaged(root, errors, hits) {
       errors.push(`file exceeds 5 MB: ${rel}`);
     }
     if (!isTextFile(rel)) continue;
-    const text = buffer;
+    const text = buffer.toString("utf8");
     if (rel.endsWith(".md") && !text.includes("Mehdi Ravanbakhsh")) {
       errors.push(`missing developer attribution: ${rel}`);
     }

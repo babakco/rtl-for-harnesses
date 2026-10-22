@@ -36,10 +36,13 @@ export function expandPath(value, home = os.homedir()) {
   return value;
 }
 
-export function buildPlan(entry, { root, home = os.homedir(), allowInPlace = false } = {}) {
+export function buildPlan(
+  entry,
+  { root, home = os.homedir(), allowInPlace = false, dryRun = false } = {},
+) {
   if (!root) throw new CliError("buildPlan requires the repository root");
   validateEntry(entry, root);
-  if (entry.inPlace && !allowInPlace) {
+  if (entry.inPlace && !allowInPlace && !dryRun) {
     throw new CliError(
       `${entry.slug} patches the installed app in place.\n` +
         "Re-run with --allow-in-place after reading docs/safety.md and confirming a backup.",
@@ -275,6 +278,7 @@ export async function commandBuild(manifest, root, slug, flags) {
   const plan = buildPlan(entry, {
     root,
     allowInPlace: Boolean(flags.allowInPlace),
+    dryRun: Boolean(flags.dryRun),
   });
   const sourceVersion = appVersion(plan.appPath);
   process.stdout.write(`harness:  ${entry.name} (${entry.slug})\n`);

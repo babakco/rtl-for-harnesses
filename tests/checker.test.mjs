@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 import { scanText, checkRepo, isForbiddenPath } from "../scripts/lib/check.mjs";
 
@@ -117,4 +118,30 @@ test("checkRepo allows missing docs only when explicitly requested", () =>
     fs.rmSync(path.join(root, "harnesses", "fixture", "README.md"));
     assert.equal(checkRepo(root).ok, false);
     assert.equal(checkRepo(root, { allowMissingDocs: true }).ok, true);
+  }));
+
+test("source extensions are scanned for private paths", () =>
+  withTemp((root) => {
+    cleanManifest(root);
+    const privatePath = "/Users/" + "alice" + "/tool";
+    fs.writeFileSync(
+      path.join(root, "harnesses", "fixture", "injector.m"),
+      `NSString *p = @"${privatePath}";\n`,
+    );
+    const result = checkRepo(root);
+    assert.equal(result.ok, false);
+    assert.ok(result.hits.some((hit) => hit.file.includes("injector.m")));
+  }));
+
+test("staged scan reads binary files larger than 1 MiB", () =>
+  withTemp((root) => {
+    cleanManifest(root);
+    fs.writeFileSync(
+      path.join(root, "icon.icns"),
+      Buffer.alloc(1024 * 1024 + 1024, 0x41),
+    );
+    assert.equal(spawnSync("git", ["init", "-q"], { cwd: root }).status, 0);
+    assert.equal(spawnSync("git", ["add", "-A"], { cwd: root }).status, 0);
+    const result = checkRepo(root, { staged: true });
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
   }));

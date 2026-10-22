@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  static:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Unit and checker tests
+        run: node --test tests/
+      - name: Privacy and integrity scan
+        run: node scripts/check-repo.mjs
+      - name: Syntax checks
+        run: |
+          node --check bin/rtl-harness.mjs
+          node --check bin/lib/manifest.mjs
+          node --check bin/lib/commands.mjs
+          node --check scripts/check-repo.mjs
+          bash -n rtl-harness

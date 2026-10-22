@@ -107,7 +107,7 @@
       "inPlace": false,
       "requires": ["node", "codesign", "plutil"],
       "testedVersion": "3.16.2",
-      "lastVerifiedVersion": null,
+      "lastVerifiedVersion": "3.16.2",
       "cwd": "harnesses/zcode",
       "entry": ["node", "bin/zcode-rtl-patch.mjs"],
       "verify": ["node", "--check", "bin/zcode-rtl-patch.mjs"],

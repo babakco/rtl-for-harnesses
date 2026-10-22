@@ -28,6 +28,14 @@ test("buildPlan refuses in-place without --allow-in-place", () => {
   assert.throws(() => buildPlan(entry, { root }), /allow-in-place/i);
 });
 
+test("buildPlan allows an in-place dry-run without consent", () => {
+  const manifest = loadManifest(root);
+  const entry = getEntry(manifest, "github-copilot");
+  const plan = buildPlan(entry, { root, dryRun: true });
+  assert.equal(plan.inPlace, true);
+  assert.match(plan.warnings.join(" "), /IN-PLACE/);
+});
+
 test("buildPlan expands $HOME and returns the manifest argv", () => {
   const manifest = loadManifest(root);
   const entry = getEntry(manifest, "codex");
