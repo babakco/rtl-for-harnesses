@@ -54,8 +54,9 @@
 `lastVerifiedVersion` در manifest برای هر هارنس ثبت می‌شود. مقدار `null`
 یعنی در این مخزن دوباره build/verify نشده است؛ این به معنی خراب بودن نیست،
 فقط یعنی شواهد این مخزن آن را تأیید نکرده. در این بازبینی، ZCode با نسخهٔ
-`3.16.2` در حالت کپی build و verify شد؛ بقیهٔ ۱۴ خروجی فقط read-only تأیید
-شدند. نتیجهٔ کامل در [`verification.md`](verification.md) است.
+`3.16.2` و Qoder با نسخهٔ `0.4.9` در حالت کپی build و verify شدند؛ بقیهٔ ۱۳
+خروجی فقط read-only تأیید شدند. نتیجهٔ کامل در
+[`verification.md`](verification.md) است.
 
 ---
 

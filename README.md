@@ -9,6 +9,14 @@ CLI بدون وابستگی، ساخت و تأیید را هماهنگ می‌ک
 
 > **توسعه‌دهنده:** [Mehdi Ravanbakhsh](AUTHORS.md)
 
+## وضعیت انتشار
+
+این مخزن عمومی است: هر کسی می‌تواند آن را clone یا fork کند و از پچ‌ها
+استفاده کند. دسترسی نوشتن فقط برای مالک است؛ کاربران دیگر نمی‌توانند در همین
+مخزن commit یا push کنند. به‌روزرسانی‌ها را مالک انجام می‌دهد.
+
+مخزن: <https://github.com/babakco/rtl-for-harnesses>
+
 ## چرا این مخزن؟
 
 - **یک ورودی برای همه:** `./rtl-harness list` و `info <slug>`.
@@ -59,7 +67,7 @@ CLI بدون وابستگی، ساخت و تأیید را هماهنگ می‌ک
 ## شروع سریع
 
 ```bash
-git clone https://github.com/<owner>/rtl-for-harnesses.git
+git clone https://github.com/babakco/rtl-for-harnesses.git
 cd rtl-for-harnesses
 ./rtl-harness doctor
 ./rtl-harness detect

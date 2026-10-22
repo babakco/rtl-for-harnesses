@@ -245,7 +245,7 @@
       "inPlace": false,
       "requires": ["node", "npx", "python3", "codesign", "plutil"],
       "testedVersion": "0.4.2",
-      "lastVerifiedVersion": null,
+      "lastVerifiedVersion": "0.4.9",
       "cwd": "harnesses/qoder",
       "entry": ["bash", "patch-qoder-rtl.sh"],
       "verify": ["bash", "-n", "patch-qoder-rtl.sh"],

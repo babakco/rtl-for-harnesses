@@ -9,6 +9,14 @@ dependency-free CLI orchestrates builds and verification.
 
 > **Developer:** [Mehdi Ravanbakhsh](AUTHORS.md)
 
+## Publication status
+
+This repository is public: anyone may clone or fork it and use the patches.
+Write access is limited to the owner; external users cannot commit or push to
+this repository. The owner performs updates.
+
+Repository: <https://github.com/babakco/rtl-for-harnesses>
+
 ## Harnesses
 
 | Harness | slug | Source app | RTL output | Method | Profile |
@@ -48,7 +56,7 @@ and each harness README. Your installed version may be newer; run
 ## Quick start
 
 ```bash
-git clone https://github.com/<owner>/rtl-for-harnesses.git
+git clone https://github.com/babakco/rtl-for-harnesses.git
 cd rtl-for-harnesses
 ./rtl-harness doctor
 ./rtl-harness detect

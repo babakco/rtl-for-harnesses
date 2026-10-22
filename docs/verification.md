@@ -58,8 +58,8 @@ placeholder، فایل ممنوع، فایل بزرگ‌تر از ۵ مگابا�
 | `verify` دستور هارنس | ۱۵ از ۱۵ |
 
 این جدول **rebuild** نیست. فقط نشان می‌دهد خروجی‌های موجود با manifest
-سازگارند و امضای معتبر دارند. به‌جز ZCode، هیچ هارنس دیگری در این مخزن از
-سورس بازسازی نشد.
+سازگارند و امضای معتبر دارند. به‌جز ZCode و Qoder، هیچ هارنس دیگری در این
+مخزن از سورس بازسازی نشد.
 
 ## ۴. ZCode smoke build (تأییدشده)
 
@@ -77,6 +77,24 @@ build از نسخهٔ اصلی کپی می‌کند، auto-update را خامو�
 تغییر نام می‌دهد و امضای ad-hoc می‌زند. برنامهٔ اصلی `ZCode.app` دست‌نخورده
 ماند. پوشهٔ موقت `harnesses/zcode/build` بعد از تأیید حذف شد و commit نمی‌شود.
 `lastVerifiedVersion` برای ZCode در manifest به `3.16.2` به‌روزرسانی شد.
+
+## ۴ب. Qoder smoke build (تأییدشده)
+
+| مرحله | نتیجه |
+|---|---|
+| source | `/Applications/Qoder.app` — نسخهٔ `0.4.9` |
+| command | `bash patch-qoder-rtl.sh` در `harnesses/qoder` |
+| output | `/Applications/Qoder-RTL.app` |
+| bundle id | `com.qoder.app.rtl` |
+| codesign | `ok` |
+| `./rtl-harness verify qoder` | `ok` |
+| launch | برنامه باز شد؛ `window.__qoderRTL.version` برابر `3.2.0` بود؛ سپس quit شد |
+| auto-update patch | لنگر `main.js` در 0.4.9 پیدا نشد؛ طبق طراحی skip شد |
+
+build از نسخهٔ اصلی کپی می‌کند و Qoder اصلی دست‌نخورده می‌ماند. پچ اختیاری
+خاموش‌کردن بررسی خودکار آپدیت در این نسخه اعمال نشد؛ تزریق RTL و فونت‌ها
+مستقل از آن انجام شد. `lastVerifiedVersion` برای Qoder در manifest به `0.4.9`
+به‌روزرسانی شد.
 
 ## ۵. تست‌های خود هارنس‌ها
 
@@ -120,21 +138,24 @@ build از نسخهٔ اصلی کپی می‌کند، auto-update را خامو�
 
 ## ۸. محدودیت‌ها و کارهای باقی‌مانده
 
-- ۱۴ هارنس دیگر در این مخزن از سورس rebuild نشدند؛ فقط خروجی موجودشان
+- ۱۳ هارنس دیگر در این مخزن از سورس rebuild نشدند؛ فقط خروجی موجودشان
   read-only تأیید شد.
 - Zed و Cline به دلیل نبود Rust/Cargo build نشدند؛ Cline علاوه بر آن به
   شبکه، Bun و Xcode CLT نیاز دارد.
 - تأیید بصری RTL در همهٔ برنامه‌ها انجام نشده؛ ZCode فقط launch شد.
 - GitHub Copilot درجا تست نشد؛ این کار نیاز به اجازهٔ صریح و پشتیبان دارد.
-- `version-drift` برای Codex، Qoder، Cline و GitHub Copilot دیده شد.
-- هیچ remote گیت‌هاب ساخته نشده و هیچ push انجام نشده است.
+- `version-drift` برای Codex، Qoder، Cline و GitHub Copilot دیده شد؛ Qoder با
+  وجود drift با نسخهٔ 0.4.9 build و verify شد.
+- مخزن عمومی در <https://github.com/babakco/rtl-for-harnesses> منتشر شد؛
+  دسترسی نوشتن فقط برای مالک است.
 - اسکن `--staged` باید درست قبل از commit نهایی دوباره اجرا شود.
 
 ## ۹. نتیجه
 
-وضعیت محلی برای بازبینی مالک آماده است: اسکلت، CLI، manifest، ۱۵ هارنس،
-مستندات فارسی، اسکن حریم خصوصی و smoke build ZCode. انتشار عمومی تا تأیید
-صریح مالک متوقف است.
+انتشار عمومی با تأیید صریح مالک انجام شد: اسکلت، CLI، manifest، ۱۵ هارنس،
+مستندات فارسی، اسکن حریم خصوصی و smoke build ZCode و Qoder در
+<https://github.com/babakco/rtl-for-harnesses> منتشر شدند. دسترسی نوشتن فقط
+برای مالک است.
 
 ---
 
