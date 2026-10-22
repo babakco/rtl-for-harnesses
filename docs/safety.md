@@ -10,8 +10,9 @@
 `/Applications/GitHub Copilot.app` تزریق می‌کند و درجا پچ می‌شود. برای آن:
 
 1. برنامه را ببندید.
-2. مطمئن شوید پشتیبان وجود دارد:
-   `$HOME/CopilotRTLBackup/GitHub Copilot.app`
+2. `patch.sh` قبل از تزریق، پشتیبان را در
+   `$HOME/CopilotRTLBackup/GitHub Copilot.app` می‌سازد؛ بعد از شروع build
+   وجود آن را بررسی کنید.
 3. فقط با `--allow-in-place` اجرا کنید:
    ```bash
    ./rtl-harness build github-copilot --yes --allow-in-place

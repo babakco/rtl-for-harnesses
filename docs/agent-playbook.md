@@ -54,8 +54,10 @@ profile == shared ?
 
 برای GitHub Copilot:
 
-- بررسی کن `$HOME/CopilotRTLBackup/GitHub Copilot.app` وجود دارد.
-- اگر نیست، اول `patch.sh` را اجرا نکن؛ به کاربر بگو پشتیبان ندارد.
+- `patch.sh` **قبل از تزریق** پشتیبان را در
+  `$HOME/CopilotRTLBackup/GitHub Copilot.app` می‌سازد.
+- بعد از شروع build مطمئن شو پشتیبان ساخته شده است؛ اگر نشد، متوقف شو و
+  برنامه را دستی از منبع رسمی دوباره نصب کن.
 - فقط با `--allow-in-place` اجرا کن.
 
 برای OpenCode:
