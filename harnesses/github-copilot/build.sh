@@ -26,7 +26,10 @@ node --check "$PAYLOAD_BUILT" && echo "    JS syntax OK"
 node --check "$PAYLOAD_SRC" && echo "    JS template syntax OK"
 
 echo "==> [3/3] Compiling injector dylib (clang, arm64)..."
+MIN_MACOS="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
 clang -dynamiclib -O2 -arch arm64 \
+  -mmacosx-version-min="$MIN_MACOS" \
+  -install_name "@loader_path/copilot_rtl_inject.dylib" \
   -framework Foundation -framework WebKit \
   -o "$DYLIB" "$DIR/injector/copilot_rtl_inject.m"
 echo "    dylib: $DYLIB"

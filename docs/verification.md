@@ -20,6 +20,7 @@ Node.js: 26.12.0
 | `clang -fsyntax-only -fobjc-arc harnesses/github-copilot/injector/copilot_rtl_inject.m` | pass |
 | `bash -n` روی همهٔ `harnesses/**/*.sh` | pass |
 | `bash -n rtl-harness` | pass |
+| `strings -a harnesses/github-copilot/injector/copilot_rtl_inject.dylib` | هیچ `/Users/` یا نام کاربری ندارد |
 
 تست‌های CLI شامل manifest، مسیر `cwd`، گسترش `$HOME`، refusal پچ درجا بدون
 `--allow-in-place`، dry-run درجا، parse آرگومان‌ها و جدول خروجی است.
@@ -99,9 +100,9 @@ build از نسخهٔ اصلی کپی می‌کند، auto-update را خامو�
 
 | معیار | نتیجه |
 |---|---|
-| فایل‌های یکسان | ۱۶۱ |
+| فایل‌های یکسان | ۱۵۹ |
 | فایل‌های عمداً کپی‌نشده | ۱۵ (build cache، parity، backup، installer غیرمرتبط) |
-| تغییر عمدی | ۲ (`zcode/package.json`؛ حذف اسکریپت parity، و `github-copilot/injector/copilot_rtl_inject.m`؛ حذف دو مسیر مطلق) |
+| تغییر عمدی | ۴ (`zcode/package.json`؛ حذف اسکریپت parity، `github-copilot/build.sh`؛ install_name و حداقل macOS، `github-copilot/injector/copilot_rtl_inject.m`؛ حذف دو مسیر مطلق، و dylib بازسازی‌شده) |
 | mismatch غیرمنتظره | ۰ |
 
 مسیرهای مطلق منبع در این سند ثبت نشده‌اند.

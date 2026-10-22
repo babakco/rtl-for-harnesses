@@ -40,7 +40,8 @@ YOUR_API_KEY_HERE
 - مسیرهای مطلق workspace شخصی در ۱۵ نقطه از ۸ سند منبع (MiMo، MiniMax،
   Qoder، Copilot و Claude) به مسیرهای نسبی مخزن یا `$HOME` تبدیل شدند؛ دو
   مسیر مطلق دیگر در `github-copilot/injector/copilot_rtl_inject.m` حذف شد
-  (مجموع ۱۷ مورد در ۹ فایل).
+  (مجموع ۱۷ مورد در ۹ فایل). dylib همان injector از سورس پاک‌سازی‌شده
+  بازسازی شد؛ `strings` آن هیچ `/Users/` یا نام کاربری ندارد.
 - فایل scratch شخصی `Harness-RTL-Project-List.txt` از مخزن خارج شد.
 - build cacheها، `.git` پروژه‌های منبع، benchmarkها، inventory مهارت‌ها و
   فایل‌های قیمت مدل کپی نشدند.
