@@ -1,0 +1,110 @@
+/* ============================================================
+   Kimi RTL Patch — rtl.css
+   هدف: Kimi Desktop 3.2.14 (Electron 43) — رابط وب kimi.com
+
+   نکته: مسیرهای ./assets/*.woff2 در زمان build توسط
+   patches/scripts/build-preload.cjs.js به data-URI تبدیل می‌شوند تا
+   مستقل از پروتکل و مقاوم در برابر CSP باشند.
+   ============================================================ */
+
+/* ---------- ۱) فونت Vazirmatn ---------- */
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/Vazirmatn-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/Vazirmatn-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/Vazirmatn-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- ۲) متغیرهای سراسری ---------- */
+html {
+  --kimi-rtl-font: "Vazirmatn", "Vazirmatn FD", "IRANSans", "Segoe UI",
+    Tahoma, system-ui, -apple-system, sans-serif;
+  --kimi-rtl-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco,
+    "Cascadia Mono", "Courier New", monospace;
+}
+
+/* ---------- ۳) اعمال فونت روی کل رابط ----------
+   (قاعدهٔ سراسری و override های زیر، عمداً ویژگیِ یکسان دارند تا
+    ترتیب منبع تعیین‌کننده باشد.) */
+html.kimi-rtl-on,
+html.kimi-rtl-on body,
+html.kimi-rtl-on body * {
+  font-family: var(--kimi-rtl-font) !important;
+}
+
+/* بلوک‌های کد / ویرایشگر کد → فونت مونو‌اسپیس */
+html.kimi-rtl-on body pre,
+html.kimi-rtl-on body pre *,
+html.kimi-rtl-on body code,
+html.kimi-rtl-on body code *,
+html.kimi-rtl-on body kbd,
+html.kimi-rtl-on body samp,
+html.kimi-rtl-on body textarea.kimi-rtl-mono,
+html.kimi-rtl-on body .monaco-editor,
+html.kimi-rtl-on body .monaco-editor *,
+html.kimi-rtl-on body .cm-editor,
+html.kimi-rtl-on body .cm-editor * {
+  font-family: var(--kimi-rtl-mono) !important;
+}
+
+/* ---------- ۴) جهت‌دهی خودکار بلوک‌ها ---------- */
+.kimi-rtl-auto[dir="rtl"] {
+  direction: rtl !important;
+  unicode-bidi: isolate;
+  text-align: start !important;
+}
+.kimi-rtl-auto[dir="ltr"] {
+  direction: ltr !important;
+  unicode-bidi: isolate;
+  text-align: start !important;
+}
+
+/* ---------- ۵) سلامت چیدمان متن‌های راست‌به‌چپ ---------- */
+.kimi-rtl-auto[dir="rtl"] {
+  overflow-wrap: anywhere;
+}
+
+/* فهرست‌های RTL: نشانگر سمت راست بماند */
+.kimi-rtl-auto[dir="rtl"] ul,
+.kimi-rtl-auto[dir="rtl"] ol {
+  padding-inline-start: 1.5em;
+  padding-inline-end: 0;
+}
+
+/* نقل‌قول: خط راهنما به سمت راست منتقل شود */
+.kimi-rtl-auto[dir="rtl"] blockquote {
+  border-inline-start: none;
+  border-inline-end: 3px solid currentColor;
+  padding-inline-start: 0;
+  padding-inline-end: 0.8em;
+  margin-inline-start: 0;
+}
+
+/* ---------- ۶) جداول RTL ---------- */
+.kimi-rtl-auto[dir="rtl"] table {
+  direction: rtl;
+}
+.kimi-rtl-auto[dir="rtl"] th,
+.kimi-rtl-auto[dir="rtl"] td {
+  text-align: start;
+}
+
+/* ---------- ۷) کد خطی داخل متن: از بافت اطراف جدا شود ---------- */
+.kimi-rtl-auto[dir="rtl"] code {
+  unicode-bidi: isolate;
+}

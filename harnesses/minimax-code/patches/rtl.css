@@ -1,0 +1,174 @@
+/* ============================================================
+ * MiniMax Code-RTL — rtl.css
+ *
+ * هدف:
+ *   1) تغییر فونت نوشتار کاربر و پاسخ‌های مدل به Vazirmatn
+ *   2) پشتیبانی از جهت راست‌به‌چپ برای بلوک‌هایی که متن فارسی دارند
+ *      (کلاس .minimax-rtl-auto توسط rtl-autodir.js روی آن‌ها ست می‌شود)
+ *
+ * نکتهٔ مسیر فونت:
+ *   url("./fonts/…") نسبت به محل این فایل حل می‌شود.
+ *   فایل rtl.css در چند ریشه (root) کپی می‌شود:
+ *     out/minimax-rtl/rtl.css            → ریشهٔ اصلی رندرر (app://)
+ *     out/pdf/minimax-rtl/rtl.css        → ریشهٔ نمایشگر PDF
+ *     dist/model-menu/minimax-rtl/rtl.css → پاپ‌آپ انتخاب مدل (file://)
+ *   در هر ریشه، پوشهٔ fonts/ کنار rtl.css قرار می‌گیرد، پس مسیر نسبی
+ *   همیشه درست است و CSP سخت‌گیرانهٔ font-src 'self' هم آن را قبول می‌کند.
+ *   علاوه بر آن، نسخهٔ «inline» (rtl-inline.css) فونت‌ها را به data-URI
+ *   تبدیل می‌کند تا در preload هم قابل استفاده باشد.
+ * ============================================================ */
+
+/* ---------- ۱) فونت Vazirmatn ---------- */
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src:
+    url("./fonts/Vazirmatn-Variable.woff2") format("woff2-variations"),
+    url("./fonts/Vazirmatn-Regular.woff2") format("woff2"),
+    url("./fonts/Vazirmatn-Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    url("./fonts/Vazirmatn-Regular.woff2") format("woff2"),
+    url("./fonts/Vazirmatn-Variable.woff2") format("woff2-variations");
+}
+
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src:
+    url("./fonts/Vazirmatn-Bold.woff2") format("woff2"),
+    url("./fonts/Vazirmatn-Variable.woff2") format("woff2-variations");
+}
+
+/* ---------- ۲) متغیرهای فونت اپ ---------- */
+/* اپ از این دو متغیر برای فونت رابط کاربری و فونت کد استفاده می‌کند.
+   با !important تعریف می‌شوند تا از استایل خود اپ (که دیرتر تزریق می‌شود)
+   و همچنین از preload (که زودتر تزریق می‌شود) قوی‌تر باشند. */
+:root,
+html {
+  --mcode-font-family-ui: "Vazirmatn", "HarmonyOS Sans", "Segoe UI", "SF Pro Text",
+    -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif !important;
+
+  /* فونت کد مونواسپیس می‌ماند، ولی Vazirmatn به‌عنوان fallback اضافه می‌شود
+     تا حروف فارسی داخل کد هم درست و خوانا رندر شوند. */
+  --mcode-font-family-code: "JetBrains Mono", "Vazirmatn", ui-monospace,
+    SFMono-Regular, "SF Mono", Menlo, Consolas, monospace !important;
+}
+
+/* ---------- ۳) فونت نوشتار کاربر و پاسخ مدل ---------- */
+/* فیلدهای ورودی و کامپوزر گفت‌وگو. ترمینال (xterm) استثناست. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]),
+textarea:not([class*="xterm"]):not(.xterm-helper-textarea),
+[contenteditable="true"]:not([class*="xterm"]) {
+  font-family: "Vazirmatn", "HarmonyOS Sans", "Segoe UI", -apple-system,
+    BlinkMacSystemFont, sans-serif !important;
+}
+
+/* بدنهٔ اپ و عناصر متنی عمومی */
+body,
+button,
+label,
+summary,
+th,
+td,
+th,
+[role="textbox"],
+[role="dialog"],
+[role="menu"],
+[role="tooltip"] {
+  font-family: "Vazirmatn", "HarmonyOS Sans", "Segoe UI", -apple-system,
+    BlinkMacSystemFont, sans-serif !important;
+}
+
+/* پیام‌های مدل و متن‌های گفت‌وگو (مارک‌داون رندرشده) */
+.minimax-rtl-message,
+.minimax-rtl-message * {
+  font-family: "Vazirmatn", "HarmonyOS Sans", "Segoe UI", -apple-system,
+    BlinkMacSystemFont, sans-serif !important;
+}
+
+/* ---------- ۴) قواعد جهت ---------- */
+/* رtl-autodir.js روی هر بلوکی که متن فارسی/عربی دارد این کلاس را می‌گذارد. */
+.minimax-rtl-auto {
+  unicode-bidi: isolate;
+}
+
+.minimax-rtl-rtl {
+  direction: rtl !important;
+}
+
+/* ترازبندی راست برای بلوک‌های متنی (نه برای دکمه‌ها/آیکون‌ها) */
+p.minimax-rtl-rtl,
+li.minimax-rtl-rtl,
+h1.minimax-rtl-rtl,
+h2.minimax-rtl-rtl,
+h3.minimax-rtl-rtl,
+h4.minimax-rtl-rtl,
+h5.minimax-rtl-rtl,
+h6.minimax-rtl-rtl,
+blockquote.minimax-rtl-rtl,
+dd.minimax-rtl-rtl,
+dt.minimax-rtl-rtl,
+figcaption.minimax-rtl-rtl,
+caption.minimax-rtl-rtl,
+summary.minimax-rtl-rtl,
+label.minimax-rtl-rtl,
+td.minimax-rtl-rtl,
+th.minimax-rtl-rtl,
+.ofv-text-block.minimax-rtl-rtl,
+.ofv-markdown-body.minimax-rtl-rtl {
+  text-align: right !important;
+}
+
+/* ---------- ۵) نمایشگر فایل و کد ---------- */
+/* خطوط کد: جهت هر خط جداگانه تعیین می‌شود (rtl-autodir.js). */
+.code-view-line-body.minimax-rtl-rtl,
+.ofv-code-body .code-view-line-body.minimax-rtl-rtl {
+  direction: rtl !important;
+  unicode-bidi: isolate;
+  text-align: right !important;
+}
+
+/* بلوک‌های کد به‌طور پیش‌فرض چپ‌به‌راست می‌مانند مگر آنکه خودشان متن فارسی داشته باشند. */
+.ofv-code-body,
+.ofv-code-container,
+.ofv-markdown-body pre,
+pre {
+  direction: ltr;
+  text-align: left;
+}
+
+/* نمایشگر متن ساده (فایل‌های txt/md و…) */
+.ofv-text-block {
+  line-height: 1.9;
+}
+
+/* ---------- ۶) ریزه‌کاری‌ها ---------- */
+/* اعداد و کد در متن فارسی نباید با فاصلهٔ اضافه بچسبند */
+.minimax-rtl-auto code,
+.minimax-rtl-auto kbd,
+.minimax-rtl-auto samp {
+  direction: ltr;
+  unicode-bidi: embed;
+  display: inline-block;
+}
+
+/* اسکرول‌بار و انتخاب متن */
+::selection {
+  background: color-mix(in srgb, #0094fc 35%, transparent);
+}
+
+/* نوار پیمایش بالای پنجره در حالت RTL */
+.minimax-rtl-rtl-app {
+  direction: rtl;
+}

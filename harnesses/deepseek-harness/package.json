@@ -1,0 +1,12 @@
+{
+  "name": "dsh-rtl-patch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RTL + Vazirmatn patch for DeepSeek Harness.app on macOS",
+  "scripts": {
+    "test": "node tools/test-rtl-engine.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0"
+  }
+}

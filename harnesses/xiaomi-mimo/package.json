@@ -1,0 +1,14 @@
+{
+  "name": "xiaomi-mimo-rtl-patch",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Builds a Persian/RTL variant of the installed Xiaomi MiMo AI macOS app.",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/rtl-payload.test.mjs",
+    "patch": "bash patch-xiaomi-mimo-rtl.sh"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  }
+}

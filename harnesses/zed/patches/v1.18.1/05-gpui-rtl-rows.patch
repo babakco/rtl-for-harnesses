@@ -1,0 +1,565 @@
+diff --git a/crates/gpui/src/text_system/line.rs b/crates/gpui/src/text_system/line.rs
+index 15101e6..087d485 100644
+--- a/crates/gpui/src/text_system/line.rs
++++ b/crates/gpui/src/text_system/line.rs
+@@ -3,6 +3,7 @@ use crate::{
+     SharedString, StrikethroughStyle, TextAlign, UnderlineStyle, Window, WrapBoundary,
+     WrappedLineLayout, black, fill, point, px, size,
+ };
++use super::line_layout::glyphs_run_visual_rtl;
+ use derive_more::{Deref, DerefMut};
+ use smallvec::SmallVec;
+ use std::sync::Arc;
+@@ -364,6 +365,14 @@ fn paint_line(
+         let baseline_offset = point(px(0.), padding_top + layout.ascent);
+         let mut decoration_runs = decoration_runs.iter();
+         let mut wraps = wrap_boundaries.iter().peekable();
++        // ZED-RTL: wrapped rows of visual-RTL text must stack bottom-up
++        // (first vec chunk = logical tail belongs at the bottom); otherwise
++        // multi-row RTL paragraphs render upside-down. LTR takes the legacy
++        // path exactly (y_step = +line_height).
++        let total_rows = wrap_boundaries.len() + 1;
++        let flip_rows =
++            total_rows > 1 && glyphs_run_visual_rtl(&layout.runs);
++        let y_step = line_height * if flip_rows { -1. } else { 1. };
+         let mut run_end = 0;
+         let mut color = black();
+         let mut current_underline: Option<(Point<Pixels>, UnderlineStyle)> = None;
+@@ -378,7 +387,11 @@ fn paint_line(
+                 layout,
+                 wraps.peek(),
+             ),
+-            origin.y,
++            if flip_rows {
++                origin.y + line_height * (total_rows - 1) as f32
++            } else {
++                origin.y
++            },
+         );
+         let mut prev_glyph_position = Point::default();
+         let mut max_glyph_size = size(px(0.), px(0.));
+@@ -405,7 +418,7 @@ fn paint_line(
+                         );
+                         if glyph.index < run_end {
+                             underline_origin.x = origin.x;
+-                            underline_origin.y += line_height;
++                            underline_origin.y += y_step;
+                         } else {
+                             current_underline = None;
+                         }
+@@ -423,7 +436,7 @@ fn paint_line(
+                         );
+                         if glyph.index < run_end {
+                             strikethrough_origin.x = origin.x;
+-                            strikethrough_origin.y += line_height;
++                            strikethrough_origin.y += y_step;
+                         } else {
+                             current_strikethrough = None;
+                         }
+@@ -437,7 +450,7 @@ fn paint_line(
+                         layout,
+                         wraps.peek(),
+                     );
+-                    glyph_origin.y += line_height;
++                    glyph_origin.y += y_step;
+                 }
+                 prev_glyph_position = glyph.position;
+ 
+@@ -611,6 +624,11 @@ fn paint_line_background(
+         let mut run_end = 0;
+         let mut current_background: Option<(Point<Pixels>, Hsla)> = None;
+         let text_system = cx.text_system().clone();
++        // ZED-RTL: same bottom-up row assignment as `paint_line` (see above).
++        let total_rows = wrap_boundaries.len() + 1;
++        let flip_rows =
++            total_rows > 1 && glyphs_run_visual_rtl(&layout.runs);
++        let y_step = line_height * if flip_rows { -1. } else { 1. };
+         let mut glyph_origin = point(
+             aligned_origin_x(
+                 origin,
+@@ -620,7 +638,11 @@ fn paint_line_background(
+                 layout,
+                 wraps.peek(),
+             ),
+-            origin.y,
++            if flip_rows {
++                origin.y + line_height * (total_rows - 1) as f32
++            } else {
++                origin.y
++            },
+         );
+         let mut prev_glyph_position = Point::default();
+         let mut max_glyph_size = size(px(0.), px(0.));
+@@ -646,7 +668,7 @@ fn paint_line_background(
+                         ));
+                         if glyph.index < run_end {
+                             background_origin.x = origin.x;
+-                            background_origin.y += line_height;
++                            background_origin.y += y_step;
+                         } else {
+                             current_background = None;
+                         }
+@@ -660,7 +682,7 @@ fn paint_line_background(
+                         layout,
+                         wraps.peek(),
+                     );
+-                    glyph_origin.y += line_height;
++                    glyph_origin.y += y_step;
+                 }
+                 prev_glyph_position = glyph.position;
+ 
+diff --git a/crates/gpui/src/text_system/line_layout.rs b/crates/gpui/src/text_system/line_layout.rs
+index e7362f7..09406bb 100644
+--- a/crates/gpui/src/text_system/line_layout.rs
++++ b/crates/gpui/src/text_system/line_layout.rs
+@@ -101,28 +101,41 @@ impl LineLayout {
+         self.len
+     }
+ 
+-    /// The x position of the character at the given index
++    /// The x position of the character at the given index.
++    ///
++    /// ZED-RTL: matches by smallest logical index (not first in vec order),
++    /// so visual-RTL glyph vecs (CoreText returns RTL runs right-to-left)
++    /// resolve to the exact glyph. For LTR vecs this is identical to the
++    /// previous first-match behavior.
+     pub fn x_for_index(&self, index: usize) -> Pixels {
++        let mut best: Option<(usize, Pixels)> = None;
+         for run in &self.runs {
+             for glyph in &run.glyphs {
+-                if glyph.index >= index {
+-                    return glyph.position.x;
++                if glyph.index >= index
++                    && best.is_none_or(|(best_ix, _)| glyph.index < best_ix)
++                {
++                    best = Some((glyph.index, glyph.position.x));
+                 }
+             }
+         }
+-        self.width
++        best.map(|(_, x)| x).unwrap_or(self.width)
+     }
+ 
+-    /// The corresponding Font at the given index
++    /// The corresponding Font at the given index.
++    ///
++    /// ZED-RTL: same smallest-index matching as `x_for_index` (see above).
+     pub fn font_id_for_index(&self, index: usize) -> Option<FontId> {
++        let mut best: Option<(usize, FontId)> = None;
+         for run in &self.runs {
+             for glyph in &run.glyphs {
+-                if glyph.index >= index {
+-                    return Some(run.font_id);
++                if glyph.index >= index
++                    && best.is_none_or(|(best_ix, _)| glyph.index < best_ix)
++                {
++                    best = Some((glyph.index, run.font_id));
+                 }
+             }
+         }
+-        None
++        best.map(|(_, font_id)| font_id)
+     }
+ 
+     /// Split this layout at a byte index, returning `(prefix, suffix)`.
+@@ -298,6 +311,69 @@ impl WrappedLineLayout {
+         self.unwrapped_layout.len
+     }
+ 
++    /// ZED-RTL: true when this wrapped line's glyphs run in visual-RTL order
++    /// (CoreText returns RTL runs right-to-left for painting) **and** it was
++    /// actually wrapped into multiple rows. In that case wrapped rows must be
++    /// assigned bottom-up (see `paint_line`); otherwise rows would stack
++    /// upside-down with the logical tail on top. LTR text (and unwrapped
++    /// lines) always returns false, preserving legacy behavior exactly.
++    pub fn is_visual_rtl(&self) -> bool {
++        !self.wrap_boundaries.is_empty() && glyphs_run_visual_rtl(&self.unwrapped_layout.runs)
++    }
++
++    /// ZED-RTL: TRUE logical byte spans of each wrap chunk, in vec-chunk
++    /// order. Unlike the cumulative end indices used by legacy code (which
++    /// assume ascending logical order along the glyph vec), these stay
++    /// correct when glyphs run in visual (RTL) order: each chunk's span is
++    /// the min/max logical index of its own glyphs. For LTR layouts the
++    /// values coincide with the cumulative computation. Empty chunks yield
++    /// degenerate spans that never overlap a selection.
++    pub fn chunk_logical_spans(&self) -> SmallVec<[(usize, usize); 4]> {
++        let bounds: SmallVec<[(usize, usize); 4]> = self
++            .wrap_boundaries
++            .iter()
++            .map(|b| (b.run_ix, b.glyph_ix))
++            .collect();
++        let mut spans: SmallVec<[(usize, usize); 4]> = SmallVec::new();
++        let mut bi = 0usize;
++        let mut cur_lo = usize::MAX;
++        let mut cur_hi = 0usize;
++        let mut cur_any = false;
++        let mut last_hi = 0usize;
++        let mut flush_chunk = |cur_lo: &mut usize,
++                               cur_hi: &mut usize,
++                               cur_any: &mut bool,
++                               last_hi: &mut usize,
++                               spans: &mut SmallVec<[(usize, usize); 4]>| {
++            if *cur_any {
++                spans.push((*cur_lo, *cur_hi));
++                *last_hi = *cur_hi;
++            } else {
++                spans.push((*last_hi, *last_hi));
++            }
++            *cur_lo = usize::MAX;
++            *cur_hi = 0;
++            *cur_any = false;
++        };
++        for (ri, run) in self.unwrapped_layout.runs.iter().enumerate() {
++            for (gi, glyph) in run.glyphs.iter().enumerate() {
++                while bi < bounds.len() && bounds[bi] == (ri, gi) {
++                    flush_chunk(&mut cur_lo, &mut cur_hi, &mut cur_any, &mut last_hi, &mut spans);
++                    bi += 1;
++                }
++                if glyph.index < cur_lo {
++                    cur_lo = glyph.index;
++                }
++                if glyph.index > cur_hi {
++                    cur_hi = glyph.index;
++                }
++                cur_any = true;
++            }
++        }
++        flush_chunk(&mut cur_lo, &mut cur_hi, &mut cur_any, &mut last_hi, &mut spans);
++        spans
++    }
++
+     /// The width of this line, in pixels, whether or not it was wrapped.
+     pub fn width(&self) -> Pixels {
+         self.wrap_width
+@@ -369,7 +445,17 @@ impl WrappedLineLayout {
+         line_height: Pixels,
+         closest: bool,
+     ) -> Result<usize, usize> {
+-        let wrapped_line_ix = (position.y / line_height) as usize;
++        let mut wrapped_line_ix = (position.y / line_height) as usize;
++        // ZED-RTL: rows of visual-RTL text paint bottom-up (see `paint_line`),
++        // so map the visual row back to its vec-order chunk first. LTR takes
++        // the legacy path exactly.
++        let row_count = self.wrap_boundaries.len() + 1;
++        if row_count > 1
++            && glyphs_run_visual_rtl(&self.unwrapped_layout.runs)
++            && wrapped_line_ix < row_count
++        {
++            wrapped_line_ix = row_count - 1 - wrapped_line_ix;
++        }
+ 
+         let wrapped_line_start_index;
+         let wrapped_line_start_x;
+@@ -422,28 +508,63 @@ impl WrappedLineLayout {
+ 
+     /// Returns the pixel position for the given byte index.
+     pub fn position_for_index(&self, index: usize, line_height: Pixels) -> Option<Point<Pixels>> {
+-        let mut line_start_ix = 0;
+-        let mut line_end_indices = self
+-            .wrap_boundaries
+-            .iter()
+-            .map(|wrap_boundary| {
+-                let run = &self.unwrapped_layout.runs[wrap_boundary.run_ix];
+-                let glyph = &run.glyphs[wrap_boundary.glyph_ix];
+-                glyph.index
+-            })
+-            .chain([self.len()])
+-            .enumerate();
+-        for (ix, line_end_ix) in line_end_indices {
+-            let line_y = ix as f32 * line_height;
+-            if index < line_start_ix {
+-                break;
+-            } else if index > line_end_ix {
+-                line_start_ix = line_end_ix;
+-                continue;
+-            } else {
+-                let line_start_x = self.unwrapped_layout.x_for_index(line_start_ix);
+-                let x = self.unwrapped_layout.x_for_index(index) - line_start_x;
+-                return Some(point(x, line_y));
++        // Legacy x chain (paint-exact row bases, as `paint_line` uses them).
++        let mut x_chain: SmallVec<[(Pixels, Pixels); 4]> = SmallVec::new();
++        {
++            let mut sx = px(0.);
++            for b in self.wrap_boundaries.iter() {
++                let ex = self.unwrapped_layout.runs[b.run_ix].glyphs[b.glyph_ix].position.x;
++                x_chain.push((sx, ex));
++                sx = ex;
++            }
++            x_chain.push((sx, self.unwrapped_layout.width));
++        }
++        // ZED-RTL: rows of visual-RTL text paint bottom-up (see `paint_line`),
++        // so emit chunks in reverse with their TRUE logical spans (which then
++        // ascend and keep the overlap logic working). LTR order is untouched.
++        let spans = self.chunk_logical_spans();
++        debug_assert_eq!(spans.len(), x_chain.len());
++        let flip_rows = self.is_visual_rtl() && spans.len() > 1;
++        let mut y_seq = 0usize;
++        if flip_rows {
++            for k in (0..x_chain.len()).rev() {
++                let (span_lo, span_hi) = spans[k];
++                let (base_x, _) = x_chain[k];
++                let line_y = y_seq as f32 * line_height;
++                y_seq += 1;
++                if index < span_lo {
++                    break;
++                } else if index > span_hi {
++                    continue;
++                } else {
++                    let x = self.unwrapped_layout.x_for_index(index) - base_x;
++                    return Some(point(x, line_y));
++                }
++            }
++        } else {
++            let mut line_start_ix = 0;
++            let mut line_end_indices = self
++                .wrap_boundaries
++                .iter()
++                .map(|wrap_boundary| {
++                    let run = &self.unwrapped_layout.runs[wrap_boundary.run_ix];
++                    let glyph = &run.glyphs[wrap_boundary.glyph_ix];
++                    glyph.index
++                })
++                .chain([self.len()])
++                .enumerate();
++            for (ix, line_end_ix) in line_end_indices {
++                let line_y = ix as f32 * line_height;
++                if index < line_start_ix {
++                    break;
++                } else if index > line_end_ix {
++                    line_start_ix = line_end_ix;
++                    continue;
++                } else {
++                    let line_start_x = self.unwrapped_layout.x_for_index(line_start_ix);
++                    let x = self.unwrapped_layout.x_for_index(index) - line_start_x;
++                    return Some(point(x, line_y));
++                }
+             }
+         }
+ 
+@@ -451,6 +572,27 @@ impl WrappedLineLayout {
+     }
+ }
+ 
++/// ZED-RTL: true when shaped glyphs run in visual-RTL order, i.e. the first
++/// painted glyph holds a later logical (string) index than the last one.
++/// CoreText emits RTL runs this way (right-to-left painting sequence with
++/// ascending x positions). LTR, empty and single-glyph inputs return false.
++pub(crate) fn glyphs_run_visual_rtl(runs: &[ShapedRun]) -> bool {
++    let mut first: Option<usize> = None;
++    let mut last = 0usize;
++    for run in runs.iter() {
++        for glyph in run.glyphs.iter() {
++            if first.is_none() {
++                first = Some(glyph.index);
++            }
++            last = glyph.index;
++        }
++    }
++    match first {
++        Some(first) => first > last,
++        None => false,
++    }
++}
++
+ pub(crate) struct LineLayoutCache {
+     previous_frame: Mutex<FrameCache>,
+     current_frame: RwLock<FrameCache>,
+@@ -1137,4 +1279,151 @@ mod tests {
+         let positions = glyph_x_positions(&layout);
+         assert_eq!(positions, vec![0.5, 0.5]);
+     }
++
++    // ZED-RTL: visual-order detection -------------------------------------
++    #[test]
++    fn test_glyphs_run_visual_rtl() {
++        // LTR: indices ascend along paint order.
++        assert!(!glyphs_run_visual_rtl(&make_layout(vec![
++            glyph_at(0., 0),
++            glyph_at(10., 2),
++            glyph_at(20., 4),
++        ])
++        .runs));
++        // RTL visual: indices descend along paint order.
++        assert!(glyphs_run_visual_rtl(&make_layout(vec![
++            glyph_at(0., 10),
++            glyph_at(10., 8),
++            glyph_at(20., 6),
++        ])
++        .runs));
++        // Empty / single glyph: never RTL.
++        assert!(!glyphs_run_visual_rtl(&[]));
++        assert!(!glyphs_run_visual_rtl(
++            &make_layout(vec![glyph_at(0., 5)]).runs
++        ));
++    }
++
++    fn make_wrapped_rtl() -> WrappedLineLayout {
++        // Simulates a pure-RTL CoreText layout: 6 glyphs, logical indices
++        // descending along the left-to-right paint order.
++        let mut layout = make_layout(vec![
++            glyph_at(0., 10),
++            glyph_at(10., 8),
++            glyph_at(20., 6),
++            glyph_at(30., 4),
++            glyph_at(40., 2),
++            glyph_at(50., 0),
++        ]);
++        layout.len = 12;
++        WrappedLineLayout {
++            unwrapped_layout: Arc::new(layout),
++            wrap_boundaries: {
++                let mut v = SmallVec::new();
++                v.push(WrapBoundary {
++                    run_ix: 0,
++                    glyph_ix: 2,
++                });
++                v.push(WrapBoundary {
++                    run_ix: 0,
++                    glyph_ix: 4,
++                });
++                v
++            },
++            wrap_width: Some(px(25.)),
++        }
++    }
++
++    fn make_wrapped_ltr() -> WrappedLineLayout {
++        let mut layout = make_layout(vec![
++            glyph_at(0., 0),
++            glyph_at(10., 2),
++            glyph_at(20., 4),
++            glyph_at(30., 6),
++            glyph_at(40., 8),
++            glyph_at(50., 10),
++        ]);
++        layout.len = 12;
++        WrappedLineLayout {
++            unwrapped_layout: Arc::new(layout),
++            wrap_boundaries: {
++                let mut v = SmallVec::new();
++                v.push(WrapBoundary {
++                    run_ix: 0,
++                    glyph_ix: 2,
++                });
++                v.push(WrapBoundary {
++                    run_ix: 0,
++                    glyph_ix: 4,
++                });
++                v
++            },
++            wrap_width: Some(px(25.)),
++        }
++    }
++
++    #[test]
++    fn test_visual_rtl_detection_on_wrapped_lines() {
++        assert!(make_wrapped_rtl().is_visual_rtl());
++        assert!(!make_wrapped_ltr().is_visual_rtl());
++        // Unwrapped lines never flip, even with RTL content.
++        let mut single = make_wrapped_rtl();
++        single.wrap_boundaries.clear();
++        assert!(!single.is_visual_rtl());
++    }
++
++    #[test]
++    fn test_position_for_index_rtl_rows_bottom_up() {
++        // Vec chunks: C0=[10,8] C1=[6,4] C2=[2,0]; flipped display puts the
++        // logical head (C2) on top.
++        let rtl = make_wrapped_rtl();
++        let lh = px(10.);
++        // Logical head -> top row.
++        assert_eq!(rtl.position_for_index(1, lh), Some(point(px(0.), px(0.))));
++        // Logical tail -> bottom row.
++        let tail = rtl.position_for_index(9, lh).expect("tail maps");
++        assert_eq!(tail.y, px(20.));
++        // LTR control: head on top via legacy path (caret rounds to next
++        // glyph, matching long-standing min-match semantics).
++        let ltr = make_wrapped_ltr();
++        assert_eq!(
++            ltr.position_for_index(1, lh),
++            Some(point(px(10.), px(0.)))
++        );
++        assert_eq!(
++            ltr.position_for_index(9, lh).map(|p| p.y),
++            Some(px(20.))
++        );
++    }
++
++    #[test]
++    fn test_index_for_position_rtl_rows_bottom_up() {
++        let rtl = make_wrapped_rtl();
++        let lh = px(10.);
++        // Top row shows the logical head: clicking top-left hits low indices.
++        // (Row C2 spans unwrapped x 40..50; adjusted x lands on glyph ix 2.)
++        assert_eq!(
++            rtl.index_for_position(point(px(5.), px(5.)), lh),
++            Ok(2)
++        );
++        // Bottom row shows the logical tail.
++        let bottom = rtl.index_for_position(point(px(5.), px(25.)), lh);
++        assert!(matches!(bottom, Ok(ix) if ix >= 8));
++        // LTR control unchanged.
++        let ltr = make_wrapped_ltr();
++        assert_eq!(ltr.index_for_position(point(px(5.), px(5.)), lh), Ok(0));
++    }
++
++    #[test]
++    fn test_x_for_index_min_match_on_visual_vecs() {
++        // RTL-visual vec: exact glyph positions by logical index.
++        let rtl = make_wrapped_rtl();
++        let layout = &rtl.unwrapped_layout;
++        assert_eq!(layout.x_for_index(8), px(10.));
++        assert_eq!(layout.x_for_index(0), px(50.));
++        assert_eq!(layout.x_for_index(11), px(100.));
++        // LTR vec unchanged (first match == min match).
++        let ltr = make_wrapped_ltr();
++        assert_eq!(ltr.unwrapped_layout.x_for_index(4), px(20.));
++    }
+ }
+diff --git a/crates/gpui/src/text_system/line_wrapper.rs b/crates/gpui/src/text_system/line_wrapper.rs
+index 678e9e0..9f913d9 100644
+--- a/crates/gpui/src/text_system/line_wrapper.rs
++++ b/crates/gpui/src/text_system/line_wrapper.rs
+@@ -471,6 +471,25 @@ impl LineWrapper {
+         // Bengali (https://en.wikipedia.org/wiki/Bengali_(Unicode_block))
+         matches!(c, '\u{0980}'..='\u{09FF}') ||
+ 
++        // ZED-RTL: Hebrew, Arabic (incl. Persian), Syriac and related scripts
++        // use spaces between words, so their letters must be word characters.
++        // Otherwise the wrapper breaks RTL text character-by-character
++        // (CJK-style), splitting words like "می‌توانم" mid-word, which reads
++        // as clipped text. (Bengali above follows the same pattern.)
++        matches!(c, '\u{0590}'..='\u{05FF}') || // Hebrew
++        matches!(c, '\u{0600}'..='\u{06FF}') || // Arabic (incl. Persian, Urdu; digits, diacritics)
++        matches!(c, '\u{0700}'..='\u{074F}') || // Syriac
++        matches!(c, '\u{0750}'..='\u{077F}') || // Arabic Supplement
++        matches!(c, '\u{0780}'..='\u{07BF}') || // Thaana
++        matches!(c, '\u{07C0}'..='\u{07FF}') || // NKo and neighbours
++        matches!(c, '\u{0800}'..='\u{08FF}') || // Samaritan, Mandaic, Syriac suppl., Arabic Ext-A/B
++        matches!(c, '\u{FB50}'..='\u{FDFF}') || // Arabic Presentation Forms-A
++        matches!(c, '\u{FE70}'..='\u{FEFF}') || // Arabic Presentation Forms-B
++        // Zero-width joiners are glue: ZWNJ (نیم‌فاصله, essential in Persian)
++        // must never start a new line, and ZWJ must keep emoji sequences
++        // (and joining) together (UAX #14 spirit for ZWJ sequences).
++        matches!(c, '\u{200C}' | '\u{200D}') ||
++
+         // Some other known special characters that should be treated as word characters,
+         // e.g. `a-b`, `var_name`, `I'm`/`won’t`, '@mention`, `#hashtag`, `100%`, `3.1415`,
+         // `2^3`, `a~b`, `a=1`, `Self::new`, etc. Trailing punctuation like `,`, `.`, `:`, `;`
+@@ -1163,6 +1182,15 @@ mod tests {
+         assert_word("quoted”");
+         assert_word("well…");
+ 
++        // ZED-RTL: Persian/Arabic/Hebrew letters and joiners glue words
++        // together so wrapping breaks at spaces, never mid-word.
++        assert_word("سلام");
++        assert_word("می‌توانم");
++        assert_word("کمکتان");
++        assert_word("مرحبا");
++        assert_word("שלום");
++        assert_word("۱۲۳۴۵");
++
+         // Space
+         assert_not_word("foo bar");
+ 

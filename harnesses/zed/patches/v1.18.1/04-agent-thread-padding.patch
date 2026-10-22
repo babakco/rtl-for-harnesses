@@ -1,0 +1,40 @@
+diff --git a/crates/agent_ui/src/conversation_view/thread_view.rs b/crates/agent_ui/src/conversation_view/thread_view.rs
+index dfff305..7948e51 100644
+--- a/crates/agent_ui/src/conversation_view/thread_view.rs
++++ b/crates/agent_ui/src/conversation_view/thread_view.rs
+@@ -4384,7 +4384,11 @@ impl ThreadView {
+                             .min_h_0()
+                             .when(fills_container, |this| this.flex_1())
+                             .pt_1()
+-                            .pr_2p5()
++                            // ZED-RTL: clear the absolute expand button at
++                            // top-right (below): it overlays ~1.5 glyphs of
++                            // the editor's first row. This padding applies in
++                            // both directions and is invisible otherwise.
++                            .pr_6()
+                             .child(self.message_editor.clone())
+                             .when(has_messages, |this| {
+                                 this.child(
+@@ -6177,6 +6181,9 @@ impl ThreadView {
+                     })
+                     .pb_3()
+                     .px_2()
++                    // ZED-RTL: keep the bubble's editor clear of the list's
++                    // right-side overlay lane (see thread scrollbar note).
++                    .pr_4()
+                     .gap_1p5()
+                     .w_full()
+                     .when(is_editable && has_checkpoint_button, |this| {
+@@ -12141,6 +12148,12 @@ impl Render for ThreadView {
+                 if has_messages {
+                     this.flex_1()
+                         .size_full()
++                        // ZED-RTL: permanently reserve the scrollbar lane on
++                        // the right (Regular track = 6px + 2x4px padding).
++                        // The overlay thumb would otherwise sit on top of the
++                        // last ~1.5 glyphs of right-pinned (RTL) rows, while
++                        // ragged LTR rows never reach it.
++                        .pr_3p5()
+                         .child(self.render_entries(cx))
+                         .vertical_scrollbar_for(&list_state, window, cx)
+                         .into_any()

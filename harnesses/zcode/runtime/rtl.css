@@ -1,0 +1,153 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   zcode-rtl.css — ZCode RTL patch
+   Loaded last, after the app's own stylesheets, so plain (non-!important)
+   specificity already wins over the app rules in the common case.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* ── 1. Vazirmatn ──────────────────────────────────────────────────────────
+   Bundled as a single variable WOFF2 (wght 100..900) so the whole weight
+   axis the UI asks for resolves without extra requests.                        */
+
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/vazirmatn-var.woff2") format("woff2");
+}
+
+/* ── 2. Re-skin the ZCode type scale ───────────────────────────────────────
+   ZCode's stylesheet defines:
+     --font-sans           ui-sans-serif, system-ui, …
+     --default-font-family var(--font-sans)
+   and `body` takes `font-family: var(--default-font-family)`. Overriding both
+   variables therefore re-skins the whole UI — including the user's composer and
+   the assistant's answer area — in one shot. `--font-mono` is deliberately left
+   alone: code must keep its monospaced metrics.
+
+   The runtime theme layer may inject `:root{--font-sans:…}` later, so the
+   override has to out-rank a same-specificity rule that arrives afterwards.  */
+
+:root,
+html,
+body {
+  --font-sans: "Vazirmatn", Vazirmatn, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+  --default-font-family: var(--font-sans) !important;
+  --zcode-rtl-on: 1;
+}
+
+/* Belt-and-braces: some ZCode panes hard-code the stack instead of going
+   through the variable, and form controls never inherit font-family from body
+   in Chromium. */
+html,
+body {
+  font-family: "Vazirmatn", Vazirmatn, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+input,
+textarea,
+select,
+button,
+optgroup {
+  font-family: "Vazirmatn", Vazirmatn, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ── 3. Per-block direction ────────────────────────────────────────────────
+   zcode-rtl.js sets dir="rtl" (or dir="ltr") on every text-bearing block it
+   inspects: any block whose text contains at least one Arabic-script character
+   becomes RTL, no matter which script the first word is in. Everything else
+   stays LTR. These rules just give the marked block a sane alignment and keep
+   the two directions from bleeding into each other.                            */
+
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .zcode-rtl-ltr,
+[dir="rtl"] [dir="ltr"] {
+  text-align: left;
+}
+
+/* ── 4. Always-LTR islands ─────────────────────────────────────────────────
+   Code, terminals and monospaced payloads must never be reordered by the bidi
+   algorithm, even when a Persian sentence surrounds them.                      */
+
+pre,
+code,
+kbd,
+samp,
+tt,
+var,
+.xterm,
+.xterm-screen,
+.xterm-rows,
+.xterm-viewport,
+.monaco-editor,
+.monaco-diff-editor,
+.cm-editor,
+.cm-content,
+.katex,
+.katex-display,
+.hljs,
+.highlight,
+.shiki,
+.code-block,
+.codeblock,
+.diff,
+[data-zcode-rtl-force-ltr],
+[dir="ltr"] {
+  direction: ltr !important;
+  unicode-bidi: isolate;
+}
+
+pre,
+code {
+  text-align: left;
+}
+
+.xterm,
+.xterm-screen,
+.xterm-rows {
+  text-align: left;
+}
+
+/* ── 5. Markdown blocks inside an RTL paragraph ────────────────────────────
+   Logical properties would handle this natively; the app uses physical ones,
+   so mirror the handful that matter for Persian list items and quotes.        */
+
+[dir="rtl"] ul,
+[dir="rtl"] ol {
+  padding-left: 0;
+  padding-right: 18px;
+}
+
+[dir="rtl"] ul,
+[dir="rtl"] ol,
+[dir="rtl"] menu {
+  list-style-position: outside;
+}
+
+[dir="rtl"] blockquote {
+  border-left: 0;
+  border-right: 2px solid currentColor;
+  padding-left: 0;
+  padding-right: 14px;
+}
+
+[dir="rtl"] table {
+  direction: rtl;
+}
+
+/* ── 6. Composer caret ─────────────────────────────────────────────────────
+   A textarea/contenteditable carrying dir="rtl" puts the caret at the right
+   edge and keeps the insertion point next to the text being typed.            */
+
+textarea[dir="rtl"],
+input[dir="rtl"],
+[contenteditable="true"][dir="rtl"],
+[contenteditable=""][dir="rtl"] {
+  text-align: right;
+}

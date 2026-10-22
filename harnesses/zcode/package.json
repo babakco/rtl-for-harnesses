@@ -1,0 +1,21 @@
+{
+  "name": "zcode-rtl-patch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Persian (Farsi) RTL + Vazirmatn patch generator for the ZCode desktop app (Electron).",
+  "type": "module",
+  "bin": {
+    "zcode-rtl-patch": "bin/zcode-rtl-patch.mjs"
+  },
+  "scripts": {
+    "patch": "node bin/zcode-rtl-patch.mjs",
+    "patch:dry": "node bin/zcode-rtl-patch.mjs --dry-run",
+    "inspect": "node bin/zcode-rtl-patch.mjs --inspect",
+    "verify": "node tools/verify-asar.mjs",
+    "harness": "node tools/make-harness.mjs",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

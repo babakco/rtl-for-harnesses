@@ -1,0 +1,24 @@
+# TROUBLESHOOTING
+
+این سند هر نشانه را به علت و راه‌حل وصل می‌کند. بدنه فارسی است و همهٔ مسیرها و فرمان‌ها و شناسه‌ها و مقدارها انگلیسی و عین مقدار واقعی‌اند. مبدأ `/Applications/ChatGPT.app` هرگز نوشته نمی‌شود. مقصد پیش‌فرض `~/Applications/ChatGPT-RTL.app` است و میان‌بر `/Applications/ChatGPT RTL.app` به آن اشاره می‌کند.
+
+## Symptom / Cause / Fix
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| پنجرهٔ سفید یا خالی بعد از `sign` | `SRI` یا هویت ماژول هش‌دار، یا `CSP` با `script-src 'self'` بدون `unsafe-inline` که اسکریپت درون‌خطی را بلاک می‌کند | تگ‌های دقیق `<script type="module" src="./assets/codex-rtl.js"></script>` و `<link rel="stylesheet" href="./assets/codex-rtl.css">` داخل `<!--CODEX-RTL:START-->` و `<!--CODEX-RTL:END-->` قبل از آخرین `</head>` در هر دو `/webview/index.html` و `/webview/detached-window.html` را بررسی کن؛ هوک `document.documentElement.dataset.codexRtl = "1"` را در رندرر زنده بخوان؛ اگر سفید ماند، بیلد فقط `CSS` را ایزوله کن |
+| سفیدماندن با وجود `verify` سالم | مُهر دوم فریمورک به‌روز نشده است | مقدار `ElectronAsarIntegrity` در `Contents/Info.plist` باید هش `HEADER` از `asarHeaderHash` باشد نه کل فایل، و شکاف `__DATA_CONST,__asar_integrity` با نگهبان `AGbevlPCksUGKNL8TSn7wGmJEuJsXb2A` باید مقدار `sha256("Resources/app.asar"+"SHA256"+headerHash)` را داشته باشد؛ هر دو را با `updateAsarHash` و `patchFrameworkIntegritySlot` به‌روز کن |
+| `abort` با `mapping process and mapped file (non-platform) have different Team IDs` و خروج `134` | امضای `adhoc` هر باینری را تیم جدا می‌کند و `disable-library-validation` نیست | `prepareEntitlements` باید `com.apple.security.cs.disable-library-validation` را افزوده باشد؛ بالادست چون همهٔ اجزا تیم `2DC432GLL2` را دارند به آن نیاز نداشت؛ اثر با `--deep` سراسری است؛ دوباره `./patch-codex-rtl.sh --make-rtl` بساز |
+| `FATAL .../asar/archive.cc:240 Failed to get integrity for validatable asar archive` | ناسازگاری دو مُهر `plist` و شکاف فریمورک | هش `HEADER` قدیمی `b0d442ed63026a266e9f86df139bcafb9dcafe628b7065ea0473fe82760a82f0` و هش کل فایل `40efd7acdf03a24817fcd7f35684fc2173b154df06774243cb4ab227e36fa915` را قاطی نکن؛ `plist` باید هش `HEADER` جدید و شکاف باید دایجست جدید باشد؛ ترتیب `asarHeaderHash` سپس `updateAsarHash` سپس `patchFrameworkIntegritySlot` سپس نوشتن `Contents/.codex-rtl-patch.json` قبل از `codesign` را رعایت کن |
+| مرگ خاموش با خروج `137` و بدون پنجره | `amfid` امضای `adhoc` با `entitlement` محدودشده را رد می‌کند: `not valid: "The file is adhoc signed but contains restricted entitlements"` | پنج کلید `com.apple.application-identifier` و `com.apple.developer.team-identifier` و `keychain-access-groups` و `com.apple.developer.aps-environment` و `com.apple.developer.usernotifications.communication` را حذف کن (کلید پنجم از نسخهٔ `26.1007` به بعد که بالادست قابلیت اعلان اضافه کرد لازم است)، همهٔ `com.apple.security.*` را نگه دار، با `codesign --force --deep --options runtime --sign -` امضا کن و با `codesign --verify --deep --strict` بسنج؛ نتیجه باید `flags=0x10002(adhoc,runtime)` باشد |
+| اجرای هم‌زمان دو نسخه | شناسهٔ `com.openai.codex` و پروفایل مشترک است | همیشه یکی را ببند؛ گارد `pgrep` روی مبدأ انتخاب‌شده (`CHATGPT_APP_SRC` یا پیش‌فرض `/Applications/ChatGPT.app`) باید خالی باشد وگرنه `preflight` با شکست متوقف می‌شود |
+| فضای دیسک ناکافی | استخراج `app.asar` با اندازهٔ `561986445` بایت جا می‌خواهد | `preflight` فضای آزاد دست‌کم دو برابر `asar` می‌خواهد؛ جا آزاد کن و `./patch-codex-rtl.sh --dry-run` را ببین |
+| پرسش `Keychain` در اولین اجرا | امضای جدید باید یک‌بار تأیید شود | نام `Codex Safe Storage` را یک‌بار تأیید کن؛ طبیعی است و نشانهٔ خرابی نیست |
+| نشست کهنه بعد از به‌روزرسانی بالادست | نسخهٔ `RTL` از مبدأ عقب است | «پچ کن» یعنی `./patch-codex-rtl.sh --make-rtl` را دوباره اجرا کن؛ `./patch-codex-rtl.sh --status` باید `sourceVersion` و `asarSha256Before` و `asarSha256After` جدید را نشان بدهد |
+| توقف `./patch-codex-rtl.sh --make-rtl` با `version changed during patch, aborting` و خروج `1` | نسخهٔ مبدأ بین شروع و پایان عوض شده است | صبر کن به‌روزرسانی تمام شود، اپ را ببند و فرمان را دوباره اجرا کن؛ این گارد عمدی است تا روی نسخهٔ ناهماهنگ پچ ننشیند |
+| مقصد موجود بدون نشان | `preflight` از بازنویسی کور جلوگیری می‌کند | اگر مقصد مال همین اسکریپت نیست، دستی جابه‌جاش کن یا `RTL_APP_DEST` را عوض کن؛ فقط مقصد با `Contents/.codex-rtl-patch.json` قابل استفادهٔ مجدد است |
+| پاراگراف فارسیِ شروع‌شونده با لاتین چپ‌چین می‌ماند | قانون قدیمی `unicode-bidi: plaintext` جهت را از اولین کاراکتر قوی می‌گرفت | در بیلد جدید `plaintext` حذف شده و `[dir="rtl"]{direction:rtl;text-align:right;}` حاکم است؛ `./patch-codex-rtl.sh --make-rtl` را دوباره اجرا کن |
+| `Couldn't load workspace settings` با دکمهٔ `Retry` | تأیید `Keychain` با نام `Codex Safe Storage` رد شده، یا هر دو نسخه هم‌زمان بالا بوده‌اند و پروفایل مشترک قفل/خراب شده | فقط یک نسخه را بالا نگه دار، در پنجرهٔ `Keychain` گزینهٔ اجازه را بزن، بعد `Retry` را بزن؛ این خطا به تزریق `RTL` مربوط نیست |
+---
+
+توسعه‌دهنده: **Mehdi Ravanbakhsh** — [AUTHORS.md](../../../AUTHORS.md)

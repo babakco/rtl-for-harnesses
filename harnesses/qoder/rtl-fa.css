@@ -1,0 +1,216 @@
+/* Qoder-RTL patch v3.1 — Vazirmatn + RTL for Persian text (Qoder 0.4.2)
+ * پوشش: خروجی دستیار (MarkdownBody + virtualization) | حباب کاربر |
+ *        کامپوزر (.loop-rich-editor) | فایل‌های workspace (تب Preview و Source)
+ * کد (pre/code) و ادیتور فایل‌های کد همیشه LTR می‌مانند.
+ */
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/vazirmatn-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/vazirmatn-medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/vazirmatn-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* هر پاراگراف/جمله‌ای که حتی یک کلمه فارسی داشته باشد (کلاس qoder-rtl-fa) —
+   حتی اگر با انگلیسی شروع شده باشد، کاملاً راست‌چین می‌شود */
+.qoder-rtl-fa {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: embed !important;
+  font-family: "Vazirmatn", "IRANSans", "Segoe UI", Tahoma, sans-serif !important;
+  line-height: 2 !important;
+  letter-spacing: 0 !important;
+}
+
+/* لیست‌ها در حالت RTL: بولت/شماره سمت راست */
+.qoder-rtl-fa:is(li),
+li.qoder-rtl-fa {
+  direction: rtl !important;
+  text-align: right !important;
+}
+ul:has(> li.qoder-rtl-fa),
+ol:has(> li.qoder-rtl-fa) {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+/* ---- اسکوپ‌هایی که آینه‌کردن حاشیه/پدینگ لازم دارند ----
+   1) خروجی دستیار 0.4.2 (data-chat-message-text / article / MarkdownBody)
+   2) پیش‌نمایش Markdown فایل workspace داخل CodeMirror */
+[data-chat-message-text][dir="rtl"] ul,
+[data-message-kind="assistant"][dir="rtl"] ul,
+[data-message-id][dir="rtl"] ul,
+[data-markdown-file-preview] .cm-markdown-embedded ul {
+  margin-left: 0 !important;
+  margin-right: 1.5rem !important;
+}
+[data-chat-message-text][dir="rtl"] ol,
+[data-message-kind="assistant"][dir="rtl"] ol,
+[data-message-id][dir="rtl"] ol,
+[data-markdown-file-preview] .cm-markdown-embedded ol {
+  margin-left: 0 !important;
+  margin-right: 1.5rem !important;
+}
+[data-chat-message-text][dir="rtl"] blockquote,
+[data-message-kind="assistant"][dir="rtl"] blockquote,
+[data-message-id][dir="rtl"] blockquote,
+.markdown-body blockquote.qoder-rtl-fa,
+[data-markdown-file-preview] .cm-markdown-embedded blockquote {
+  padding-left: 0 !important;
+  padding-right: 1.5rem !important;
+  border-left: none !important;
+}
+/* نقل قول در چت: تم border-l-2 فیزیکی دارد؛ فلیپ به راست */
+.markdown-body blockquote.qoder-rtl-fa {
+  border-right: 2px solid var(--q7cd089, currentColor) !important;
+}
+
+/* ---- فایل‌های workspace (داخل CodeMirror) ----
+   کانتینر پایدار (React) با کلاس .qoder-rtl-file علامت می‌خورد و dir=rtl
+   می‌گیرد؛ چون CodeMirror هر تغییر خارجی داخل .cm-content را برمی‌گرداند،
+   قوانین همه از همین کانتainer و فرزندانش اعمال می‌شود (نه روی خود خطوط).
+   حالت‌ها:
+     Preview = [data-markdown-file-preview]
+     Source  = [data-workspace-source-file-viewer]  (پیش‌فرض برنامه)
+   تم اصلی فیزیکی است: .cm-line { padding: 0 16px 0 4px } و نقل‌قول
+   border-left/padding-left دارد، پس آینه می‌شوند. */
+.qoder-rtl-file .cm-content,
+.qoder-rtl-file .cm-line {
+  direction: rtl !important;
+  text-align: right !important;
+}
+.qoder-rtl-file .cm-line {
+  font-family: "Vazirmatn", "IRANSans", "Segoe UI", Tahoma, sans-serif !important;
+  line-height: 1.9 !important;
+  padding-right: 8px !important;
+  padding-left: 16px !important;
+  letter-spacing: 0 !important;
+}
+/* تیترها در پیش‌نمایش */
+.qoder-rtl-file .cm-line[class*="cm-markdown-heading"] {
+  font-weight: 600 !important;
+  line-height: 1.8 !important;
+}
+/* نقل‌قول: لبه سمت راست (تم اصلی border-left فیزیکی دارد) */
+.qoder-rtl-file .cm-line[class*="cm-markdown-quote"] {
+  border-left: none !important;
+  border-right: 2px solid var(--q7cd089) !important;
+  padding-left: 0 !important;
+  padding-right: 16px !important;
+  font-style: italic !important;
+}
+/* لیست‌ها: تم اصلی padding-inline-start منطقی دارد و خودکار آینه می‌شود،
+   فقط فونت و فاصلهٔ خط هماهنگ می‌شود. */
+.qoder-rtl-file .cm-line[class*="cm-markdown-list-line"],
+.qoder-rtl-file .cm-line[class*="cm-markdown-list-marker"] {
+  font-family: "Vazirmatn", "IRANSans", "Segoe UI", Tahoma, sans-serif !important;
+}
+/* بلوک‌های کد همیشه LTR و تک‌عرض */
+.qoder-rtl-file .cm-line[class*="cm-markdown-code"] {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  line-height: 1.6 !important;
+}
+.qoder-rtl-file .cm-markdown-code code,
+.qoder-rtl-file .cm-markdown-code pre,
+.qoder-rtl-file code,
+.qoder-rtl-file pre {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+}
+/* کد inline، ریاضی KaTeX و لینک‌های فنی داخل متن فارسی LTR بمانند */
+.qoder-rtl-file .cm-markdown-inline-code,
+.qoder-rtl-file .cm-markdown-math,
+.qoder-rtl-file .cm-markdown-link,
+.qoder-rtl-file .cm-markdown-file-icon {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+}
+/* جدول‌های markdown که به‌صورت ویجت embed رندر می‌شوند */
+.qoder-rtl-file .cm-markdown-embedded ul,
+.qoder-rtl-file .cm-markdown-embedded ol {
+  margin-left: 0 !important;
+  margin-right: 1.5rem !important;
+}
+.qoder-rtl-file .cm-markdown-embedded blockquote {
+  padding-left: 0 !important;
+  padding-right: 1.5rem !important;
+  border-left: none !important;
+  border-right: 2px solid var(--q7cd089) !important;
+}
+.qoder-rtl-file .cm-markdown-embedded .markdown-body td,
+.qoder-rtl-file .cm-markdown-embedded .markdown-body th {
+  text-align: right !important;
+}
+
+/* ---- کد، فرمول و ترمینال در خروجی AI همیشه LTR می‌مانند ---- */
+.qoder-rtl-fa pre,
+.qoder-rtl-fa code,
+.qoder-rtl-fa kbd,
+.qoder-rtl-fa samp,
+.qoder-rtl-fa tt,
+pre.qoder-rtl-fa,
+code.qoder-rtl-fa {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  line-height: 1.6 !important;
+}
+
+/* ---- حباب کاربر (0.4.2): div[data-chat-message-text] با whitespace-pre-wrap ----
+   حباب بیرونی flex justify-end است و نباید dir بگیرد (جای حباب عوض نشود) */
+[data-user-message] [data-chat-message-text].qoder-rtl-fa,
+[data-user-bubble] [data-chat-message-text].qoder-rtl-fa,
+[data-message-kind="user"] [data-chat-message-text].qoder-rtl-fa,
+.qoder-rtl-user {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: embed !important;
+  font-family: "Vazirmatn", "IRANSans", "Segoe UI", Tahoma, sans-serif !important;
+  line-height: 2 !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* ---- ورودی چت (کامپوزر .loop-rich-editor در 0.4.2) ---- */
+.qoder-rtl-input,
+textarea.qoder-rtl-input,
+[contenteditable="true"].qoder-rtl-input,
+.loop-rich-editor.qoder-rtl-input,
+[data-chat-composer-editor-shell] .qoder-rtl-input,
+[data-chat-composer] .qoder-rtl-input {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: embed !important;
+  font-family: "Vazirmatn", "IRANSans", "Segoe UI", Tahoma, sans-serif !important;
+  line-height: 2 !important;
+}
+
+/* منشن‌ها/چیپ‌ها (@file و...) داخل ورودی RTL همیشه LTR بمانند */
+.qoder-rtl-input [data-editor-inline-token],
+.loop-rich-editor.qoder-rtl-input [data-editor-inline-token],
+.qoder-rtl-input a[data-editor-link] {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left !important;
+}

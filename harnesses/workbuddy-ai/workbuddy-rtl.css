@@ -1,0 +1,86 @@
+/* ============================================================
+ * WorkBuddy RTL patch v1.5.0 — workbuddy-rtl.css
+ * - فونت سراسری رابط کاربری: Vazirmatn (نصب‌شده در سیستم)
+ * - متن‌های حاوی کاراکتر فارسی با کلاس wb-rtl راست‌به‌چپ می‌شوند
+ *   (کلاس توسط workbuddy-rtl.js اضافه می‌شود)
+ * - بلاک‌های کد، ترمینال، فرمول ریاضی و آیکون‌ها دست نخورده می‌مانند
+ * ============================================================ */
+
+/* --- ۱) فونت Vazirmatn برای کل رابط کاربری، به‌جز موارد مستثنا --- */
+html,
+body,
+body *:not(pre):not(code):not(kbd):not(samp):not(tt):not(i):not(svg):not(path):not(use):not(canvas):not([class*="icon"]):not([class*="Icon"]):not([class*="fa-"]):not([class*="katex"]):not(.katex):not(.katex *):not(.monaco-editor):not(.monaco-editor *):not([class*="monaco"]):not(.cm-editor):not(.cm-editor *):not(.xterm):not(.xterm *) {
+  font-family: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans", sans-serif !important;
+}
+
+/* --- ۲) زمینه‌های کد: فونت مونو حفظ شود، Vazirmatn فقط برای گلیف فارسی --- */
+pre,
+pre *,
+code,
+code *,
+kbd,
+kbd *,
+samp,
+samp *,
+tt,
+tt *,
+.monaco-editor,
+.monaco-editor *,
+.cm-editor,
+.cm-editor *,
+.xterm,
+.xterm * {
+  font-family: Menlo, Monaco, Consolas, "Courier New", "Vazirmatn", monospace !important;
+}
+
+/* --- ۳) فرمول‌های ریاضی (KaTeX) دست نخورده --- */
+.katex,
+.katex * {
+  font-family: KaTeX_Main, "Times New Roman", serif !important;
+}
+
+/* --- ۴) گره فارسی: کل پاراگراف/جمله راست‌به‌چپ --- */
+.wb-rtl {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+/* --- ۴-ب) پاراگراف کاملاً انگلیسی زیر جد فارسی: LTR صریح --- */
+.wb-ltr {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+/* لیست‌های فارسی: نشانگر (bullet) سمت راست */
+li.wb-rtl {
+  list-style-position: inside;
+}
+
+/* اینلاین انگلیسی زیر جد فارسی: ایزوله جهت تا در جمله فارسی درست بنشیند */
+span.wb-ltr,
+a.wb-ltr,
+strong.wb-ltr,
+em.wb-ltr,
+b.wb-ltr,
+i.wb-ltr,
+u.wb-ltr,
+small.wb-ltr,
+mark.wb-ltr,
+q.wb-ltr,
+cite.wb-ltr,
+abbr.wb-ltr,
+time.wb-ltr,
+var.wb-ltr {
+  unicode-bidi: isolate !important;
+}
+
+/* --- ۵) ورودی کاربر: جهت صریح از JS (فارسی→RTL، وگرنه LTR) ---
+ * توجه: unicode-bidi حتماً normal است تا قانون «وجود فارسی» حاکم باشد،
+ * نه قانون «اولین کاراکتر قوی» (plaintext). */
+textarea.wb-rtl-input,
+input.wb-rtl-input,
+select.wb-rtl-input,
+[contenteditable].wb-rtl-input {
+  unicode-bidi: normal !important;
+  text-align: start !important;
+}

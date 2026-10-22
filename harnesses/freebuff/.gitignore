@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# Local-only state (Freebuff's own project marker)
+.freebuff/
+
+# Python venv present in this workspace (77 MB, not part of the patch)
+.venv/
+
+# Local dev dependency for patch/rtl.test.js
+node_modules/
+package-lock.json

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" translate="no" class="notranslate">
+<head>
+<meta charset="utf-8">
+<title>MiniMax Code-RTL — fixture</title>
+<!-- دقیقاً همان CSS و JS که داخل اپ تزریق می‌شوند -->
+<link rel="stylesheet" href="../patches/rtl-inline.css">
+<script src="../patches/rtl-autodir.js" defer></script>
+<style>
+  /* شبیه‌سازی استایل اپ: متغیرهای فونت اپ را تعریف می‌کند */
+  :root {
+    --mcode-font-family-ui: "HarmonyOS Sans", "Segoe UI", sans-serif;
+    --mcode-font-family-code: Hack, ui-monospace, monospace;
+  }
+  body { font-family: var(--mcode-font-family-ui); background: #fff; color: #111; padding: 16px; }
+  .code-view-line-body { font-family: var(--mcode-font-family-code); display: block; }
+  .ofv-text-block { white-space: pre; }
+</style>
+</head>
+<body>
+
+<h1>MiniMax Code-RTL — تست جهت‌دهی</h1>
+
+<!-- ۱) پاراگراف‌های گفت‌وگو -->
+<div id="chat">
+  <p id="p1">سلام دنیا</p>
+  <p id="p2">Hello سلام دنیا</p>
+  <p id="p3">(توجه) این مهم است</p>
+  <p id="p4">2024-01-01 گزارش روز</p>
+  <p id="p5">Hello world</p>
+  <p id="p6">1234</p>
+</div>
+
+<!-- ۲) پرسش چندگزینه‌ای (AskUserQuestion) -->
+<div id="question">
+  <div id="qtitle">کدام روش را انتخاب می‌کنید؟</div>
+  <button id="opt1">نصب وابستگی‌ها — وابستگی‌ها را از شبکه نصب می‌کند</button>
+  <button id="opt2">Use prebuilt binary — downloads a ready-to-run build</button>
+</div>
+
+<!-- ۳) نمایشگر کد -->
+<div class="code-view">
+  <div class="code-view-line"><div class="code-view-line-body" id="line1">const x = 42;</div></div>
+  <div class="code-view-line"><div class="code-view-line-body" id="line2">// این یک توضیح فارسی است</div></div>
+  <div class="code-view-line"><div class="code-view-line-body" id="line3">console.log(x);</div></div>
+</div>
+
+<!-- ۴) نمایشگر فایل متنی -->
+<div class="ofv-text-block" id="txt">line one
+این خط فارسی است
+line three</div>
+
+<!-- ۵) کامپوزر -->
+<textarea id="composer" rows="3" placeholder="پیام خود را بنویسید…"></textarea>
+
+<div id="results" style="margin-top:24px;font-family:monospace"></div>
+
+<script>
+/* ==================== تست‌ها ==================== */
+const CASES = [
+  // [id, متنِ مورد انتظار برای dir یا null برای «دست‌نخورده»]
+  ["p1", "rtl", "پاراگراف کاملاً فارسی"],
+  ["p2", "rtl", "شروع با کلمهٔ انگلیسی"],
+  ["p3", "rtl", "شروع با پرانتز"],
+  ["p4", "rtl", "شروع با عدد و خط تیره"],
+  ["p5", "ltr", "کاملاً انگلیسی"],
+  ["p6", null, "فقط عدد — دست‌نخورده"],
+  ["qtitle", "rtl", "عنوان پرسش"],
+  ["opt1", "rtl", "توضیح گزینهٔ فارسی"],
+  ["opt2", "ltr", "توضیح گزینهٔ انگلیسی"],
+  ["line1", "ltr", "خط کد انگلیسی"],
+  ["line2", "rtl", "خط کد با توضیح فارسی"],
+  ["line3", "ltr", "خط کد انگلیسی دوم"],
+  ["txt", null, "بلوک متنی چندخطی — خودِ ظرف علامت نمی‌خورد (خط‌ها جداگانه)"]
+];
+
+function run() {
+  const out = [];
+  let pass = 0, fail = 0;
+
+  for (const [id, expected, desc] of CASES) {
+    const el = document.getElementById(id);
+    if (!el) { out.push(`MISSING  ${id} — ${desc}`); fail++; continue; }
+    const actual = el.getAttribute("dir");
+    const ok = actual === expected;
+    ok ? pass++ : fail++;
+    out.push(`${ok ? "PASS" : "FAIL"}  ${id.padEnd(8)} expect=${String(expected).padEnd(5)} actual=${String(actual).padEnd(5)} — ${desc}`);
+  }
+
+  // خط‌های داخل بلوک متنی
+  const lines = document.querySelectorAll("#txt .minimax-rtl-line");
+  const lineExpect = ["ltr", "rtl", "ltr"];
+  lines.forEach((ln, i) => {
+    const actual = ln.getAttribute("dir");
+    const ok = actual === lineExpect[i];
+    ok ? pass++ : fail++;
+    out.push(`${ok ? "PASS" : "FAIL"}  txt[${i}]   expect=${lineExpect[i].padEnd(5)} actual=${String(actual).padEnd(5)} — خط ${i + 1} فایل متنی`);
+  });
+  if (lines.length !== 3) { fail++; out.push(`FAIL  txt split — انتظار ۳ خط، دریافت ${lines.length}`); }
+
+  // فونت
+  const fontOk = document.fonts.check("16px Vazirmatn");
+  fontOk ? pass++ : fail++;
+  out.push(`${fontOk ? "PASS" : "FAIL"}  font     — document.fonts.check("16px Vazirmatn") = ${fontOk}`);
+  const loaded = [...document.fonts].filter(f => f.family === "Vazirmatn").map(f => `${f.weight}/${f.style}`);
+  out.push(`INFO  fonts   — ${loaded.join(", ") || "هیچ"}`);
+
+  // کلاس علامت‌گذاری
+  const marked = document.querySelectorAll(".minimax-rtl-auto").length;
+  out.push(`INFO  marked  — ${marked} عنصر با کلاس minimax-rtl-auto`);
+
+  // کامپوزر
+  const composer = document.getElementById("composer");
+  const setVal = (v) => {
+    composer.value = v;
+    composer.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  setVal("سلام، این یک پیام فارسی است");
+  const dirFa = composer.getAttribute("dir");
+  setVal("this is an english message");
+  const dirEn = composer.getAttribute("dir");
+  const composerOk = dirFa === "rtl" && dirEn === "ltr";
+  composerOk ? pass++ : fail++;
+  out.push(`${composerOk ? "PASS" : "FAIL"}  composer — fa=${dirFa} en=${dirEn}`);
+
+  // راست‌چین شدن پاراگراف فارسی
+  const p1 = document.getElementById("p1");
+  const cs = getComputedStyle(p1);
+  const alignOk = cs.direction === "rtl" && cs.textAlign === "right";
+  alignOk ? pass++ : fail++;
+  out.push(`${alignOk ? "PASS" : "FAIL"}  style-fa — direction=${cs.direction} text-align=${cs.textAlign}`);
+
+  // پاراگراف انگلیسی باید چپ‌به‌راست بماند (dir="ltr" نباید با !important خراب شود)
+  const p5 = document.getElementById("p5");
+  const cs5 = getComputedStyle(p5);
+  const ltrOk = cs5.direction === "ltr" && cs5.textAlign !== "right";
+  ltrOk ? pass++ : fail++;
+  out.push(`${ltrOk ? "PASS" : "FAIL"}  style-en — direction=${cs5.direction} text-align=${cs5.textAlign}`);
+
+  // فونت مؤثر
+  const fontFamily = getComputedStyle(document.getElementById("p1")).fontFamily;
+  const ffOk = /Vazirmatn/i.test(fontFamily);
+  ffOk ? pass++ : fail++;
+  out.push(`${ffOk ? "PASS" : "FAIL"}  ff       — font-family=${fontFamily}`);
+
+  const summary = { pass, fail, total: pass + fail };
+  window.__RTL_TEST__ = { ...summary, lines: out };
+  document.getElementById("results").textContent = out.join("\n") + `\n\n=== ${pass}/${pass + fail} PASS ===`;
+  document.title = `RTL-TEST ${fail === 0 ? "PASS" : "FAIL"} ${pass}/${pass + fail}`;
+}
+
+window.addEventListener("load", () => setTimeout(run, 400));
+</script>
+</body>
+</html>

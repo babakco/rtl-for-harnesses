@@ -1,0 +1,58 @@
+diff --git a/crates/gpui_macos/src/text_system.rs b/crates/gpui_macos/src/text_system.rs
+index fbc4886..176d50c 100644
+--- a/crates/gpui_macos/src/text_system.rs
++++ b/crates/gpui_macos/src/text_system.rs
+@@ -53,6 +53,22 @@ use crate::open_type::apply_features_and_fallbacks;
+ #[allow(non_upper_case_globals)]
+ const kCGImageAlphaOnly: u32 = 7;
+ 
++/// ZED-RTL: true when `text` holds at least one strongly RTL character.
++/// Same ranges as the row rule used by the editor/markdown RTL patches.
++fn text_has_rtl_char(text: &str) -> bool {
++    text.chars().any(|c| {
++        matches!(c,
++            '\u{0590}'..='\u{08FF}'
++            | '\u{FB50}'..='\u{FDFF}'
++            | '\u{FE70}'..='\u{FEFF}'
++            | '\u{200F}'
++            | '\u{202B}'
++            | '\u{202E}'
++            | '\u{2066}'..='\u{2069}'
++        )
++    })
++}
++
+ /// macOS text system using CoreText for font shaping.
+ pub struct MacTextSystem(RwLock<MacTextSystemState>);
+ 
+@@ -617,6 +633,30 @@ impl MacTextSystemState {
+             }
+         }
+         let typographic_bounds = line.get_typographic_bounds();
++        // ZED-RTL: CoreText hangs trailing logical neutrals (the space just
++        // typed) at negative x for RTL lines (proven with a Swift probe:
++        // neither CTLine nor CTTypesetter honors an RTL base direction
++        // here). Right-aligned painting then shifts the whole words left
++        // until the next character turns the space medial. Shift the content
++        // right so it lives inside [0, width]: the words stop jumping and
++        // the caret (via x_for_index + the editor's RTL end-mirror) lands
++        // at the visual line end. Lines without negative glyphs — including
++        // all LTR lines — are untouched.
++        if text_has_rtl_char(text) {
++            let min_x = runs
++                .iter()
++                .flat_map(|run| run.glyphs.iter())
++                .map(|glyph| f32::from(glyph.position.x))
++                .fold(f32::INFINITY, f32::min);
++            if min_x.is_finite() && min_x < 0.0 {
++                let shift = px(-min_x);
++                for run in runs.iter_mut() {
++                    for glyph in run.glyphs.iter_mut() {
++                        glyph.position.x = glyph.position.x + shift;
++                    }
++                }
++            }
++        }
+         LineLayout {
+             runs,
+             font_size,

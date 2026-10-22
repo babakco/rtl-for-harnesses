@@ -1,0 +1,64 @@
+diff --git a/crates/agent_ui/src/message_editor.rs b/crates/agent_ui/src/message_editor.rs
+index fe10a36..6567fc8 100644
+--- a/crates/agent_ui/src/message_editor.rs
++++ b/crates/agent_ui/src/message_editor.rs
+@@ -2017,17 +2017,31 @@ impl Render for MessageEditor {
+             .child({
+                 let settings = ThemeSettings::get_global(cx);
+ 
+-                let text_style = TextStyle {
++                let mut text_style = TextStyle {
+                     color: cx.theme().colors().text,
+-                    font_family: settings.agent_buffer_font_family().clone(),
++                    // ZED-RTL: the input box always uses Vazirmatn directly
++                    // (not via fallback). Mixing a monospace primary with a
++                    // proportional fallback stretches Persian word spacing;
++                    // a single font keeps the metrics consistent.
++                    font_family: "Vazirmatn".into(),
+                     font_fallbacks: settings.buffer_font.fallbacks.clone(),
+                     font_features: settings.buffer_font.features.clone(),
+-                    font_size: settings.agent_buffer_font_size(cx).into(),
++                    // ZED-RTL: the typing box renders 1pt larger than the
++                    // agent response font (user request).
++                    font_size: (settings.agent_ui_font_size(cx) + px(1.)).into(),
+                     font_weight: settings.buffer_font.weight,
+                     line_height: relative(settings.buffer_line_height.value()),
+                     ..Default::default()
+                 };
+ 
++                // ZED-RTL: right-align the whole input box as soon as it
++                // contains a Persian/Arabic/Hebrew character, so Persian
++                // input starts from the right. The buffer editor has no
++                // per-paragraph alignment, hence this box-level flip.
++                if message_editor_contains_rtl(&self.editor.read(cx).text(cx)) {
++                    text_style.text_align = gpui::TextAlign::Right;
++                }
++
+                 EditorElement::new(
+                     &self.editor,
+                     EditorStyle {
+@@ -2045,6 +2059,24 @@ impl Render for MessageEditor {
+ 
+ pub struct MessageEditorAddon {}
+ 
++/// ZED-RTL: true when `text` holds at least one strongly RTL character
++/// (Persian/Arabic/Hebrew ranges or an explicit RTL mark).
++/// Duplicated from `markdown::rtl` on purpose so this patch adds no
++/// cross-crate dependency to `agent_ui`.
++fn message_editor_contains_rtl(text: &str) -> bool {
++    text.chars().any(|c| {
++        matches!(c,
++            '\u{0590}'..='\u{08FF}'
++            | '\u{FB50}'..='\u{FDFF}'
++            | '\u{FE70}'..='\u{FEFF}'
++            | '\u{200F}'
++            | '\u{202B}'
++            | '\u{202E}'
++            | '\u{2066}'..='\u{2069}'
++        )
++    })
++}
++
+ impl MessageEditorAddon {
+     pub fn new() -> Self {
+         Self {}

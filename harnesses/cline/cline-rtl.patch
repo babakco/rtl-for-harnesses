@@ -1,0 +1,274 @@
+diff --git a/apps/examples/desktop-app/scripts/package-desktop.ts b/apps/examples/desktop-app/scripts/package-desktop.ts
+index c775acb..afee205 100644
+--- a/apps/examples/desktop-app/scripts/package-desktop.ts
++++ b/apps/examples/desktop-app/scripts/package-desktop.ts
+@@ -15,7 +15,7 @@ const BOOLEAN_FLAGS = new Set(["--allow-unsigned-mac", "--skip-build"]);
+ const VALUE_FLAGS = new Set(["--platform", "--target"]);
+ const VALID_FLAGS = [...BOOLEAN_FLAGS, ...VALUE_FLAGS];
+ 
+-const APP_NAME = "Cline";
++const APP_NAME = "Cline RTL";
+ const APP_ROOT = path.resolve(import.meta.dir, "..");
+ const BUNDLE_ROOT = path.join(
+ 	APP_ROOT,
+diff --git a/apps/examples/desktop-app/src-tauri/tauri.conf.json b/apps/examples/desktop-app/src-tauri/tauri.conf.json
+index de23e81..462dea7 100644
+--- a/apps/examples/desktop-app/src-tauri/tauri.conf.json
++++ b/apps/examples/desktop-app/src-tauri/tauri.conf.json
+@@ -1,8 +1,8 @@
+ {
+ 	"$schema": "https://schema.tauri.app/config/2",
+-	"productName": "Cline",
++	"productName": "Cline RTL",
+ 	"version": "0.0.45",
+-	"identifier": "bot.cline.app",
++	"identifier": "bot.cline.app.rtl",
+ 	"build": {
+ 		"beforeDevCommand": "bun run build:runtime && bun run dev:web",
+ 		"devUrl": "http://localhost:3125",
+@@ -11,6 +11,7 @@
+ 	},
+ 	"plugins": {
+ 		"updater": {
++			"active": false,
+ 			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENEMTJDNzk2RUExQUY3RDEKUldUUjl4cnFsc2NTelYxNzlFR1NkWnI0VTM1V0hvQXRyOW0xV2c0bFhkL3dhdkdpNGhNRW1MQXEK",
+ 			"endpoints": [
+ 				"https://github.com/cline/cline/releases/download/desktop-latest/latest.json"
+@@ -21,7 +22,7 @@
+ 		"windows": [
+ 			{
+ 				"label": "main",
+-				"title": "Cline",
++				"title": "Cline RTL",
+ 				"width": 1500,
+ 				"height": 980,
+ 				"resizable": true,
+diff --git a/apps/examples/desktop-app/webview/app/globals.css b/apps/examples/desktop-app/webview/app/globals.css
+index 0da7f17..d2c0074 100644
+--- a/apps/examples/desktop-app/webview/app/globals.css
++++ b/apps/examples/desktop-app/webview/app/globals.css
+@@ -8,6 +8,7 @@
+ /* Unlayered on purpose: its chat-polish rules must beat Streamdown's layered
+  * Tailwind utilities (from the @source below) without !important. */
+ @import "@cline/ui/components/markdown.css";
++@import "./rtl.css";
+ 
+ @source "../../node_modules/streamdown/dist";
+ 
+diff --git a/apps/examples/desktop-app/webview/app/rtl.css b/apps/examples/desktop-app/webview/app/rtl.css
+new file mode 100644
+index 0000000..4970431
+--- /dev/null
++++ b/apps/examples/desktop-app/webview/app/rtl.css
+@@ -0,0 +1,55 @@
++/* Vazirmatn Variable (SIL OFL). The woff2 subsets are fetched by
++ * build-rtl.sh into webview/public/fonts so the patch stays dependency-free:
++ * adding an npm dependency here invalidates the upstream bun.lock and makes
++ * bun re-resolve unrelated @ai-sdk/* versions, which breaks `bun run build:sdk`.
++ * unicode-range values come from @fontsource-variable/vazirmatn@5.3.0. */
++@font-face {
++	font-family: "Vazirmatn Variable";
++	font-style: normal;
++	font-display: swap;
++	font-weight: 100 900;
++	src: url("/fonts/vazirmatn-arabic-wght-normal.woff2") format("woff2-variations");
++	unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
++}
++
++@font-face {
++	font-family: "Vazirmatn Variable";
++	font-style: normal;
++	font-display: swap;
++	font-weight: 100 900;
++	src: url("/fonts/vazirmatn-latin-ext-wght-normal.woff2") format("woff2-variations");
++	unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
++}
++
++@font-face {
++	font-family: "Vazirmatn Variable";
++	font-style: normal;
++	font-display: swap;
++	font-weight: 100 900;
++	src: url("/fonts/vazirmatn-latin-wght-normal.woff2") format("woff2-variations");
++	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
++}
++
++.cline-rtl-composer {
++	font-family:
++		"Vazirmatn Variable", "Vazirmatn", var(--font-sans);
++}
++
++.cline-rtl-composer[dir="rtl"] {
++	text-align: right;
++}
++
++.cline-rtl-markdown .cline-markdown {
++	font-family:
++		"Vazirmatn Variable", "Vazirmatn", var(--font-sans);
++}
++
++.cline-rtl-markdown .cline-markdown [dir="rtl"] {
++	text-align: right;
++}
++
++.cline-rtl-markdown .cline-markdown pre,
++.cline-rtl-markdown .cline-markdown code,
++.cline-rtl-markdown .cline-markdown [data-streamdown="code-block"] {
++	font-family: var(--font-mono);
++}
+diff --git a/apps/examples/desktop-app/webview/components/ui/markdown.tsx b/apps/examples/desktop-app/webview/components/ui/markdown.tsx
+index 37c5974..7ec7c2d 100644
+--- a/apps/examples/desktop-app/webview/components/ui/markdown.tsx
++++ b/apps/examples/desktop-app/webview/components/ui/markdown.tsx
+@@ -12,7 +12,7 @@ import type {
+ 	PointerEvent,
+ 	ReactNode,
+ } from "react";
+-import { isValidElement, memo, useRef, useState } from "react";
++import { isValidElement, memo, useEffect, useRef, useState } from "react";
+ import {
+ 	type Components,
+ 	type ExtraProps,
+@@ -20,6 +20,7 @@ import {
+ 	Streamdown,
+ } from "streamdown";
+ import { openExternalUrl } from "@/lib/desktop-client";
++import { applyRtlToMarkdownRoot } from "@/lib/rtl";
+ import { cn } from "@/lib/utils";
+ import {
+ 	AlertDialog,
+@@ -388,15 +389,39 @@ export const MemoizedMarkdown = memo(
+ 			setPendingUrl,
+ 		} = useDiagramLinkTarget();
+ 
++		const rootRef = useRef<HTMLDivElement>(null);
++		useEffect(() => {
++			if (rootRef.current) {
++				applyRtlToMarkdownRoot(rootRef.current);
++			}
++		}, [content, streaming]);
++		useEffect(() => {
++			const root = rootRef.current;
++			if (!root) {
++				return;
++			}
++			const observer = new MutationObserver(() =>
++				applyRtlToMarkdownRoot(root),
++			);
++			observer.observe(root, {
++				childList: true,
++				subtree: true,
++				characterData: true,
++			});
++			return () => observer.disconnect();
++		}, []);
++
+ 		return (
+ 			// `contents` keeps the wrapper out of layout while still receiving
+ 			// events from the diagram subtree. Capture phase is required: the
+ 			// anchors are injected SVG markup, so they cannot carry their own
+-			// React handlers.
++			// React handlers. `cline-rtl-markdown` is the RTL wrapper that the
++			// observer above keeps `dir`-tagged per block.
+ 			<div
+-				className="contents"
++				className="contents cline-rtl-markdown"
+ 				onClickCapture={captureDiagramLink}
+ 				onPointerDownCapture={recordDiagramLinkPress}
++				ref={rootRef}
+ 			>
+ 				<Streamdown
+ 					className={cn("cline-markdown", classNames)}
+diff --git a/apps/examples/desktop-app/webview/components/views/chat/chat-input-bar.tsx b/apps/examples/desktop-app/webview/components/views/chat/chat-input-bar.tsx
+index c652ce8..e79700a 100644
+--- a/apps/examples/desktop-app/webview/components/views/chat/chat-input-bar.tsx
++++ b/apps/examples/desktop-app/webview/components/views/chat/chat-input-bar.tsx
+@@ -71,6 +71,7 @@ import {
+ 	VOICE_INPUT_SETTINGS_CHANGED_EVENT,
+ } from "@/lib/provider-model-catalog";
+ import type { ProviderModel } from "@/lib/provider-schema";
++import { containsPersian } from "@/lib/rtl";
+ import { startStreamingTranscription } from "@/lib/streaming-transcription";
+ import { cn } from "@/lib/utils";
+ import { PullRequestBar } from "./pull-request-bar";
+@@ -1245,6 +1246,8 @@ function ChatInputBarImpl({
+ 							}
+ 							aria-expanded={slashOpen || mentionOpen}
+ 							aria-haspopup="listbox"
++							className="cline-rtl-composer"
++							dir={containsPersian(promptInput) ? "rtl" : "ltr"}
+ 							variant={variant}
+ 							onChange={(e) => {
+ 								if (speechInputActive) return;
+diff --git a/apps/examples/desktop-app/webview/lib/rtl.test.ts b/apps/examples/desktop-app/webview/lib/rtl.test.ts
+new file mode 100644
+index 0000000..628443c
+--- /dev/null
++++ b/apps/examples/desktop-app/webview/lib/rtl.test.ts
+@@ -0,0 +1,34 @@
++import { describe, expect, test } from "vitest";
++import { containsPersian } from "./rtl";
++
++describe("containsPersian", () => {
++	test("detects a Persian word", () => {
++		expect(containsPersian("\u0633\u0644\u0627\u0645")).toBe(true);
++	});
++
++	test("detects Persian later in an English-led sentence", () => {
++		expect(containsPersian("Hello world \u0633\u0644\u0627\u0645 \u062f\u0646\u06cc\u0627")).toBe(true);
++	});
++
++	test("detects Persian after leading punctuation or symbols", () => {
++		expect(containsPersian("... \u0633\u0644\u0627\u0645")).toBe(true);
++		expect(containsPersian(">>> next step: \u0646\u0635\u0628")).toBe(true);
++	});
++
++	test("detects a lone Persian character inside code-like text", () => {
++		expect(containsPersian("const x = 1; // \u06cc")).toBe(true);
++	});
++
++	test("rejects English-only text", () => {
++		expect(containsPersian("Hello world, fix the failing test.")).toBe(false);
++	});
++
++	test("rejects empty and whitespace-only text", () => {
++		expect(containsPersian("")).toBe(false);
++		expect(containsPersian("   \n\t  ")).toBe(false);
++	});
++
++	test("rejects digits and punctuation without Persian letters", () => {
++		expect(containsPersian("123?!...")).toBe(false);
++	});
++});
+diff --git a/apps/examples/desktop-app/webview/lib/rtl.ts b/apps/examples/desktop-app/webview/lib/rtl.ts
+new file mode 100644
+index 0000000..62253d8
+--- /dev/null
++++ b/apps/examples/desktop-app/webview/lib/rtl.ts
+@@ -0,0 +1,26 @@
++const PERSIAN_CHARACTER_PATTERN =
++	/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u200C\u200D]/;
++
++export function containsPersian(value: string): boolean {
++	return PERSIAN_CHARACTER_PATTERN.test(value);
++}
++
++const RTL_BLOCK_SELECTOR = "p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th";
++
++const LTR_ONLY_SELECTOR = "pre, code, [data-streamdown='code-block']";
++
++export function applyRtlToMarkdownRoot(root: Element): void {
++	if (!(root instanceof HTMLElement)) {
++		return;
++	}
++	const blocks = root.querySelectorAll(RTL_BLOCK_SELECTOR);
++	blocks.forEach((block) => {
++		if (!(block instanceof HTMLElement)) {
++			return;
++		}
++		if (block.closest(LTR_ONLY_SELECTOR)) {
++			return;
++		}
++		block.dir = containsPersian(block.textContent ?? "") ? "rtl" : "ltr";
++	});
++}

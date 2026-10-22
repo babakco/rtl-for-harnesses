@@ -1,0 +1,8 @@
+node_modules/
+__pycache__/
+*.pyc
+.work/orig.asar
+.work/patched.asar
+.work/cdp-probe*.mjs
+.work/cdp-check.mjs
+*.log

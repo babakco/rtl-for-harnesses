@@ -1,0 +1,26 @@
+/* Antigravity RTL stylesheet — applied ONLY to flipped blocks.
+ * Inlined verbatim into AG_RTL_CSS at patch time (see tools/apply-rtl-patch.sh).
+ * No global rules: pure-English UI stays exactly as before.
+ * Font is system-provided Vazirmatn (user installs it); Tahoma keeps
+ * text readable when Vazirmatn is missing.
+ */
+[dir="rtl"],
+.ag-rtl {
+  font-family: "Vazirmatn", "IRANSans", Tahoma, "Segoe UI", sans-serif;
+  text-align: right;
+  unicode-bidi: isolate;
+}
+
+/* Numbers, Latin fragments and inline code inside RTL text keep their order. */
+[dir="rtl"] bdi,
+[dir="rtl"] .ag-num,
+[dir="rtl"] code,
+[dir="rtl"] kbd,
+[dir="rtl"] samp,
+.ag-rtl bdi,
+.ag-rtl .ag-num,
+.ag-rtl code,
+.ag-rtl kbd,
+.ag-rtl samp {
+  unicode-bidi: isolate;
+}

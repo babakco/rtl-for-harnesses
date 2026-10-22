@@ -1,0 +1,29 @@
+{
+  // ZED-RTL font setup — merge into ~/.config/zed/settings.json
+  // (or run scripts/apply-settings.sh).
+  //
+  // Design: prose (answers + UI) uses Vazirmatn directly; code/input boxes
+  // keep a monospace primary with Vazirmatn as FIRST fallback, so Persian
+  // glyphs render in Vazirmatn while Latin code keeps alignment.
+  // (Agent inline-code blocks reuse agent_buffer_font_family, hence the
+  // fallback design — a proportional primary would break code alignment.)
+  "ui_font_family": "Vazirmatn",
+  "ui_font_fallbacks": ["Vazirmatn", ".SystemUIFont"],
+  "buffer_font_family": ".ZedMono",
+  "buffer_font_fallbacks": ["Vazirmatn", ".ZedMono", "Menlo"],
+  "agent_ui_font_family": "Vazirmatn",
+  "agent_buffer_font_family": ".ZedMono",
+  "markdown_preview": {
+    "font_family": "Vazirmatn"
+  },
+  // IMPORTANT for Zed-RTL.app: its updater would otherwise replace the
+  // patched app with a stock Zed build on the next release, silently
+  // removing RTL. Re-run make-rtl-app-from-installed.sh after updating
+  // the stock Zed instead. (Shared setting: also disables it for stock
+  // Zed — re-enable manually if you want stock auto-updates.)
+  "auto_update": false,
+  "terminal": {
+    "font_family": ".ZedMono",
+    "font_fallbacks": ["Vazirmatn"]
+  }
+}

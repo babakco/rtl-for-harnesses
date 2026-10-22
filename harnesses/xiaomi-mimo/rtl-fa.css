@@ -1,0 +1,97 @@
+/* Xiaomi MiMo AI — RTL / Persian patch  (styles)
+ * ---------------------------------------------------------------------------
+ * v1.1.0  (injected as out/renderer/rtl-fa.css)
+ *
+ *  * `.mimo-rtl-fa`   -> a sentence / paragraph that contains Persian letters.
+ *                        Forced RTL + Vazirmatn, even when the block begins
+ *                        with Latin characters or punctuation.
+ *  * `.mimo-rtl-input`-> the composer / any editable field the user types in.
+ *  * code, terminal, math always stay LTR + monospace.
+ * ---------------------------------------------------------------------------
+ */
+
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/vazirmatn-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/vazirmatn-medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./assets/vazirmatn-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- 1) Persian sentence / paragraph (model output + prose) --------------- */
+.mimo-rtl-fa {
+  direction: rtl !important;
+  text-align: right !important;
+  font-family: "Vazirmatn", "Vazir", "IRANSans", "Tahoma", system-ui, sans-serif !important;
+  line-height: 1.9 !important;
+  letter-spacing: 0 !important;
+}
+
+/* list markers (bullets / numbers) move to the right-hand side as well */
+.mimo-rtl-fa:is(ul, ol),
+.mimo-rtl-fa:is(ul, ol) > li {
+  direction: rtl !important;
+  text-align: right !important;
+  padding-left: 0 !important;
+  padding-right: 23px !important;
+}
+
+/* --- 2) The composer (what the user types) -------------------------------- */
+.mimo-rtl-input {
+  direction: rtl !important;
+  text-align: right !important;
+  /* NOT `plaintext`: that would fall back to first-strong detection and break
+     the "starts with Latin but still RTL" requirement. */
+  unicode-bidi: embed !important;
+  font-family: "Vazirmatn", "Vazir", "IRANSans", "Tahoma", system-ui, sans-serif !important;
+}
+
+textarea.mimo-rtl-input,
+input.mimo-rtl-input {
+  text-align: right !important;
+}
+
+/* --- 3) Code / terminal / math must never be mirrored -------------------- */
+.mimo-rtl-fa pre,
+.mimo-rtl-fa code,
+.mimo-rtl-fa kbd,
+.mimo-rtl-fa samp,
+.mimo-rtl-fa tt,
+.mimo-rtl-fa var,
+.mimo-rtl-fa .katex,
+.mimo-rtl-fa .katex-display,
+.mimo-rtl-fa mjx-container,
+pre.mimo-rtl-fa,
+code.mimo-rtl-fa {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace !important;
+  line-height: 1.6 !important;
+}
+
+/* --- 4) Icons / controls inside a Persian block keep their own font ------ */
+.mimo-rtl-fa svg,
+.mimo-rtl-fa button,
+.mimo-rtl-fa [role="button"],
+.mimo-rtl-fa [class*="icon"],
+.mimo-rtl-fa [class*="Icon"] {
+  direction: inherit;
+  font-family: inherit;
+}

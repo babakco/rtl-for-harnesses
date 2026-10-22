@@ -1,0 +1,82 @@
+diff --git a/crates/editor/src/element.rs b/crates/editor/src/element.rs
+index f88b928..177ac89 100644
+--- a/crates/editor/src/element.rs
++++ b/crates/editor/src/element.rs
+@@ -253,6 +253,24 @@ pub enum SplitSide {
+     Right,
+ }
+ 
++/// ZED-RTL: true when `text` holds at least one strongly RTL character
++/// (Persian/Arabic/Hebrew ranges or an explicit RTL mark).
++/// Duplicated from `markdown::rtl` on purpose: `editor` is a low-level crate
++/// and must not depend on `markdown`.
++fn line_text_is_rtl(text: &str) -> bool {
++    text.chars().any(|c| {
++        matches!(c,
++            '\u{0590}'..='\u{08FF}'
++            | '\u{FB50}'..='\u{FDFF}'
++            | '\u{FE70}'..='\u{FEFF}'
++            | '\u{200F}'
++            | '\u{202B}'
++            | '\u{202E}'
++            | '\u{2066}'..='\u{2069}'
++        )
++    })
++}
++
+ impl EditorElement {
+     pub(crate) const SCROLLBAR_WIDTH: Pixels = ui::EDITOR_SCROLLBAR_WIDTH;
+ 
+@@ -1051,9 +1069,30 @@ impl EditorElement {
+                         [cursor_position.row().minus(visible_display_row_range.start) as usize];
+                     let cursor_column = cursor_position.column() as usize;
+ 
+-                    let cursor_character_x = cursor_row_layout.x_for_index(cursor_column)
+-                        + cursor_row_layout
+-                            .alignment_offset(self.style.text.text_align, text_hitbox.size.width);
++                    let cursor_raw_x = cursor_row_layout.x_for_index(cursor_column);
++                    let cursor_alignment_offset = cursor_row_layout
++                        .alignment_offset(self.style.text.text_align, text_hitbox.size.width);
++                    let mut cursor_character_x = cursor_raw_x + cursor_alignment_offset;
++                    // ZED-RTL: in right-aligned editors (in practice only the
++                    // agent input box, which flips when it holds Persian), a
++                    // caret at the logical end of an RTL line belongs to the
++                    // visual line end (left edge); at logical start, to the
++                    // right edge. Mid-line carets already resolve through the
++                    // per-glyph indices. The conditions are self-correcting:
++                    // if the shaper ever becomes fully RTL-aware, the raw x
++                    // is already visual and neither branch triggers.
++                    if self.style.text.text_align == TextAlign::Right
++                        && cursor_row_layout.fragments.iter().any(|fragment| {
++                            matches!(fragment, LineFragment::Text(shaped) if line_text_is_rtl(&shaped.text))
++                        })
++                    {
++                        if cursor_raw_x >= cursor_row_layout.width {
++                            cursor_character_x = cursor_alignment_offset;
++                        } else if cursor_column == 0 {
++                            cursor_character_x =
++                                cursor_alignment_offset + cursor_row_layout.width;
++                        }
++                    }
+                     let cursor_next_x = cursor_row_layout.x_for_index(cursor_column + 1)
+                         + cursor_row_layout
+                             .alignment_offset(self.style.text.text_align, text_hitbox.size.width);
+@@ -8110,7 +8149,17 @@ impl Element for EditorElement {
+ 
+                     // Offset the content_bounds from the text_bounds by the gutter margin (which
+                     // is roughly half a character wide) to make hit testing work more like how we want.
+-                    let content_offset = point(editor_margins.gutter.margin, Pixels::ZERO);
++                    // ZED-RTL: skip that rightward shift for right-aligned
++                    // (RTL input) editors: with the shift, right-pinned rows
++                    // end `margin` px past the text hitbox and the hitbox
++                    // paint-layer clips ~1 Persian char off every row, while
++                    // ragged LTR rows never reach the edge. All downstream
++                    // math keys off content_origin, so it stays coherent.
++                    let content_offset = if self.style.text.text_align == TextAlign::Right {
++                        point(Pixels::ZERO, Pixels::ZERO)
++                    } else {
++                        point(editor_margins.gutter.margin, Pixels::ZERO)
++                    };
+                     let content_origin = text_hitbox.origin + content_offset;
+ 
+                     let height_in_lines = f64::from(bounds.size.height / line_height);

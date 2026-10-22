@@ -1,0 +1,162 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   dsh-rtl.css — DeepSeek Harness RTL patch
+   Loaded last, after the app's own stylesheets, so plain (non-!important)
+   specificity already wins over the app rules in the common case.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* ── 1. Vazirmatn ──────────────────────────────────────────────────────────
+   Bundled as a single variable WOFF2 (wght 100..900) so the whole weight
+   axis the UI asks for resolves without extra requests. The app's own
+   --dsw-font-* shorthands all reference --dsw-font-family, so overriding
+   that one variable re-skins the entire type scale in one shot.            */
+
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/vazirmatn-var.woff2") format("woff2");
+}
+
+:root {
+  /* The theme plugin injects `:root{--dsw-font-family:…}` at runtime, so the
+     override has to out-rank a same-specificity rule that arrives later.
+     0.2.1-rc.2 also funnels the UI face through --dsh-font-family-text
+     (new Font settings rows), so that layer is pinned here too. */
+  --dsh-font-family-text-default: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif !important;
+  --dsh-font-family-text: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif !important;
+  --dsw-font-family: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif !important;
+  --dsw-font-family-brand: "Vazirmatn", "Vazirmatn", sans-serif !important;
+  /* Keep code monospaced — Vazirmatn has no mono metrics and code must not
+     inherit the UI face. */
+  --ds-font-family-code: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
+    "Liberation Mono", Menlo, Courier, monospace !important;
+  --dsh-rtl-on: 1;
+}
+
+/* The boot wordmark is the one place the app hard-codes Montserrat rather
+   than going through --dsw-font-family; remap the family itself. */
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/vazirmatn-var.woff2") format("woff2");
+}
+
+/* Since 0.2.1-rc.2 the theme re-declares --dsw-font-family directly on
+   `body` (resolving through --dsh-font-family-text for the new Font
+   settings). A direct declaration on body shadows an inherited :root value
+   — !important or not — so the stack is re-asserted here as well. Code
+   faces (--ds-font-family-code / markdown code vars) are deliberately left
+   untouched. */
+html body {
+  --dsh-font-family-text: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif !important;
+  --dsw-font-family: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif !important;
+  --dsw-font-family-brand: "Vazirmatn", "Vazirmatn", sans-serif !important;
+}
+
+/* Form controls do not inherit font-family from body in Chromium. */
+input,
+textarea,
+select,
+button,
+optgroup {
+  font-family: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ── 2. Per-block direction ────────────────────────────────────────────────
+   dsh-rtl.js sets dir="rtl" (or dir="ltr") on every text-bearing block it
+   inspects: any block whose text contains at least one Arabic-script
+   character becomes RTL, no matter which script the first word is in.
+   Everything else stays LTR. These rules just give the marked block a sane
+   alignment and keep the two directions from bleeding into each other.    */
+
+[dir="rtl"] {
+  text-align: right;
+}
+
+/* ── 3. Always-LTR islands ─────────────────────────────────────────────────
+   Code, terminals and monospaced payloads must never be reordered by the
+   bidi algorithm, even when a Persian sentence surrounds them.            */
+
+pre,
+code,
+kbd,
+samp,
+tt,
+.xterm,
+.xterm-screen,
+.xterm-rows,
+.monaco-editor,
+[data-dsh-rtl-force-ltr],
+[dir="ltr"] {
+  direction: ltr !important;
+  unicode-bidi: isolate;
+}
+
+pre,
+code {
+  text-align: left;
+}
+
+.xterm,
+.xterm-screen,
+.xterm-rows {
+  text-align: left;
+}
+
+/* ── 4. Markdown blocks inside an RTL paragraph ────────────────────────────
+   Logical properties would handle this natively; the app uses physical ones,
+   so mirror the handful that matter for Persian list items and quotes.     */
+
+[dir="rtl"] ul,
+[dir="rtl"] ol {
+  padding-left: 0;
+  padding-right: 18px;
+}
+
+[dir="rtl"] ul,
+[dir="rtl"] ol,
+[dir="rtl"] menu {
+  list-style-position: outside;
+}
+
+[dir="rtl"] blockquote {
+  border-left: 0;
+  border-right: 2px solid var(--dsw-alias-label-caption, #adb2b8);
+  padding-left: 0;
+  padding-right: 14px;
+}
+
+[dir="rtl"] table {
+  direction: rtl;
+}
+
+/* Reference chips carry a directional icon margin from the LTR stylesheet. */
+[dir="rtl"] .refIcon,
+[dir="rtl"] .linkIcon {
+  margin-right: 0;
+  margin-left: 4px;
+}
+
+[dir="rtl"] .markdown a,
+[dir="rtl"] .markdown .fileLink {
+  margin-left: -3px;
+  margin-right: -3px;
+}
+
+/* ── 5. Composer caret ─────────────────────────────────────────────────────
+   A textarea/contenteditable carrying dir="rtl" puts the caret at the right
+   edge and keeps the insertion point next to the text being typed.        */
+
+textarea[dir="rtl"],
+[contenteditable="true"][dir="rtl"] {
+  text-align: right;
+}

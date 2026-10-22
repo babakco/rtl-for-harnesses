@@ -1,0 +1,219 @@
+/* FBF-RTL-PATCH-V5
+   ============================================================
+   Freebuff Desktop - RTL + Vazirmatn patch
+   Target: Freebuff Desktop 0.0.146+ (Electron + Bun orchestrator)
+   Behavior chosen by user:
+     - Layout stays LTR
+     - Chat/prose: any text block containing Persian/Arabic -> RTL
+       (right-aligned, readable right-to-left), even if it starts with
+       English words; pure-English blocks stay LTR.
+     - Opened files (CodeMirror): DOCUMENTATION/text files get the same
+       RTL rule; CODE files ALWAYS stay LTR (critical).
+       (dir=rtl/ltr set by rtl.js on leaf text blocks and editor lines)
+     - Vazirmatn is used ONLY for Persian/Arabic glyphs, including inside
+       the editor; English/Latin keeps using Google Sans / DM Mono.
+   Applied by appending this file to ui/assets/index-*.css
+   (the orchestrator serves ui/ from disk at request time).
+   V3 changes vs V2 (for 0.0.146+):
+     - Base fonts changed: Inter (assets/*.woff2) -> Google Sans +
+       DM Mono + Freebuff Outfit (fonts/ dir). The old Inter stack is
+       kept as a harmless fallback but the live stacks are Google Sans
+       (body) and DM Mono (code). Google Sans ships NO Arabic subset,
+       so Vazirmatn is now REQUIRED for Persian glyphs (was nice-to-have).
+     - Font-alias trick: extra @font-face blocks named "Google Sans",
+       "DM Mono" and "Freebuff Outfit" with an Arabic-only unicode-range
+       pointing at the Vazirmatn file. Any hard-coded
+       `font-family:Google Sans` rule (50+ in the bundle) automatically
+       renders Persian with Vazirmatn without touching those rules.
+     - Composer input migrated from <textarea> to a contentEditable div
+       ([data-composer-input].composer-input); both are covered now.
+      - New message/code classes covered: .user-message-text,
+        .md-pre, .md-inline.
+    V4 changes (for 0.0.161+):
+      - Multiple-choice questions (.question-dock/.question UI) covered:
+        .question-text, .question-option-body/label/desc, .question-plan
+        and the free-text answer input .question-free. Only leaf TEXT spans
+        get dir (the flex-row option buttons stay LTR so checkboxes keep
+        their position — text RTL, layout LTR per user rule).
+      - Agent to-do list (.todo-dock UI) covered: .todo-dock-text leaves.
+    V5 changes (for 0.0.169+):
+      - The bundle now ships 1318 distinct classNames; the app adds new
+        text surfaces every release, so a fixed selector list cannot keep
+        up. rtl.js gained a GENERIC layer: it walks text nodes and flags
+        whichever element directly owns Persian text, marked with
+        [data-fbf-rtl="1"]. This single rule covers every present and
+        future Persian surface (onboarding prompts, reasoning blocks,
+        notices, proposals, thread titles, …) with no selector upkeep.
+      - Hard exclusions (code, terminal, CodeMirror, diffs, svg, a11y
+        labels) and layout-only wrappers (buttons/tabs/menu items, so
+        flex row order never flips) are honoured in JS, not CSS.
+    ============================================================ */
+
+/* Vazirmatn variable font — restricted to Arabic/Persian codepoints so the
+   browser only fetches/uses it for those glyphs and keeps Google Sans/DM Mono
+   for Latin. */
+@font-face {
+  font-family: Vazirmatn;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(./vazirmatn-wght.woff2) format("woff2-variations");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF,
+    U+FB50-FDFF, U+FE70-FEFF, U+200C-200F, U+202B, U+202E, U+25CC;
+}
+
+/* Font aliases: render Persian/Arabic with Vazirmatn even inside rules that
+   hard-code `font-family:Google Sans` / `"DM Mono"` / `Freebuff Outfit`
+   (the bundle has 50+ such rules that ignore --font-sans). The browser picks
+   this face only for Arabic codepoints; Latin keeps using the original font
+   files. Both normal and italic map to the same (roman) Vazirmatn file. */
+@font-face {
+  font-family: "Google Sans";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(./vazirmatn-wght.woff2) format("woff2-variations");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF,
+    U+FB50-FDFF, U+FE70-FEFF, U+200C-200F, U+202B, U+202E, U+25CC;
+}
+@font-face {
+  font-family: "Google Sans";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(./vazirmatn-wght.woff2) format("woff2-variations");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF,
+    U+FB50-FDFF, U+FE70-FEFF, U+200C-200F, U+202B, U+202E, U+25CC;
+}
+@font-face {
+  font-family: "DM Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(./vazirmatn-wght.woff2) format("woff2-variations");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF,
+    U+FB50-FDFF, U+FE70-FEFF, U+200C-200F, U+202B, U+202E, U+25CC;
+}
+@font-face {
+  font-family: "Freebuff Outfit";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(./vazirmatn-wght.woff2) format("woff2-variations");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-089F, U+08A0-08FF,
+    U+FB50-FDFF, U+FE70-FEFF, U+200C-200F, U+202B, U+202E, U+25CC;
+}
+
+/* Put Vazirmatn into the sans stack as an Arabic fallback. Latin resolves to
+   Google Sans (its woff2 files cover latin + many scripts but NOT Arabic),
+   Arabic falls through to Vazirmatn. The legacy Inter stack is kept first as
+   a no-op fallback for older bundles that still define it. */
+:root {
+  --font-sans: "Google Sans", "Inter Variable", Inter, Vazirmatn, system-ui,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+}
+
+/* Same Arabic fallback for the mono stack (now DM Mono based). The var
+   override covers `font: ... var(--font-mono)` rules; the direct rule below
+   covers hard-coded mono stacks. */
+:root {
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Vazirmatn,
+    monospace;
+}
+
+/* Same Arabic fallback for monospace / code / terminal contexts so Persian
+   appearing in code comments or terminal output still renders with Vazirmatn.
+   DM Mono is the 0.0.146+ base; the ui-monospace/Menlo tail keeps older
+   bundles working. */
+pre,
+code,
+kbd,
+samp,
+.xterm,
+.tool-row-details,
+.md-pre,
+.md-inline {
+  font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Vazirmatn,
+    monospace;
+}
+
+/* Opened files (CodeMirror editor): use Vazirmatn for Persian/Arabic glyphs
+   (Latin/code still uses the app's mono stack). Font applies to ALL files;
+   RTL direction is only applied to documentation files by rtl.js — code
+   files are forced LTR there. */
+.cm-editor,
+.cm-editor .cm-content,
+.file-editor .cm-editor {
+  font-family: ui-monospace, Menlo, Monaco, Consolas, Vazirmatn, monospace !important;
+}
+
+/* Keep code / inline-code / terminal LTR even when a surrounding paragraph
+   got dir="rtl" from rtl.js — code must never look scrambled. .md-pre /
+   .md-inline are the 0.0.146+ code-block classes (.md-code wrapper kept). */
+.prose pre,
+.prose code,
+.prose kbd,
+.prose samp,
+.prose .md-pre,
+.prose .md-inline,
+.prose .md-code,
+.bubble pre,
+.bubble code,
+.md-pre,
+.md-inline,
+.md-code,
+.xterm {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: isolate;
+}
+
+/* RTL blocks flagged by rtl.js (any Persian/Arabic character): right-align
+   AND force direction. `dir="rtl"` is only a presentational hint (low cascade
+   priority) and text-align is inherited — an ancestor setting `text-align:left`
+   (e.g. the .question-option button) would otherwise leave RTL text hugging
+   the left edge.
+   V3: composer is now a contentEditable div ([data-composer-input]
+   .composer-input) as well as the legacy textarea; user bubbles expose
+   .user-message-text inside .bubble.
+   V4: multiple-choice questions (.question-*) and the agent to-do list
+   (.todo-dock-text). Only leaf text spans are flagged — flex-row containers
+   (.question-option, .todo-dock-item) intentionally stay LTR so checkboxes
+   keep their position. */
+.prose [dir="rtl"],
+.bubble[dir="rtl"],
+.bubble [dir="rtl"],
+.user-message-text[dir="rtl"],
+.message-text[dir="rtl"],
+.tool-row-details[dir="rtl"],
+.composer textarea[dir="rtl"],
+.composer [data-composer-input][dir="rtl"],
+.composer-input[dir="rtl"],
+.question-text[dir="rtl"],
+.question-option-body[dir="rtl"],
+.question-option-label[dir="rtl"],
+.question-option-desc[dir="rtl"],
+.question-plan[dir="rtl"],
+.question-free[dir="rtl"],
+.todo-dock-text[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+/* V5 generic rule: the element that directly owns Persian text is flagged by
+   rtl.js with [data-fbf-rtl="1"]. This covers every Persian surface the app
+   ships (now or later) without maintaining a selector list. The attribute is
+   only ever set on leaf text elements — never on flex/grid rows — so this
+   cannot reorder any layout. */
+[data-fbf-rtl="1"] {
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: isolate;
+}
+
+/* Safety net: even if JS is slow to flag a node, a Persian-only leaf still
+   gets Vazirmatn shaping from the font aliases above (no extra work needed —
+   this only guarantees bidi isolation for punctuation at block edges). */
+[dir="rtl"] {
+  unicode-bidi: isolate;
+}

@@ -1,0 +1,100 @@
+diff --git a/crates/editor/src/navigation.rs b/crates/editor/src/navigation.rs
+index 2c1607e..5a8f256 100644
+--- a/crates/editor/src/navigation.rs
++++ b/crates/editor/src/navigation.rs
+@@ -1,9 +1,46 @@
+ use super::*;
++use language::Point;
++use multi_buffer::MultiBufferRow;
++
++/// ZED-RTL: true when the caret's buffer row holds at least one strongly RTL
++/// character (Persian/Arabic/Hebrew). The Unicode range table is duplicated
++/// here on purpose so low-level editor code gains no new crate dependency.
++fn caret_row_is_rtl(map: &DisplaySnapshot, point: DisplayPoint) -> bool {
++    let buffer_point = point.to_point(map);
++    let snapshot = map.buffer_snapshot();
++    let end = snapshot.line_len(MultiBufferRow(buffer_point.row));
++    let text: String = snapshot
++        .text_for_range(Point::new(buffer_point.row, 0)..Point::new(buffer_point.row, end))
++        .collect();
++    text.chars().any(|c| {
++        matches!(c,
++            '\u{0590}'..='\u{08FF}'
++            | '\u{FB50}'..='\u{FDFF}'
++            | '\u{FE70}'..='\u{FEFF}'
++            | '\u{200F}'
++            | '\u{202B}'
++            | '\u{202E}'
++            | '\u{2066}'..='\u{2069}'
++        )
++    })
++}
+ 
+ impl Editor {
+     pub fn move_left(&mut self, _: &MoveLeft, window: &mut Window, cx: &mut Context<Self>) {
+         self.change_selections(Default::default(), window, cx, |s| {
+             s.move_with(&mut |map, selection| {
++                // ZED-RTL: on RTL rows the arrow keys move visually: Left
++                // behaves as Right would and vice versa. LTR rows (and all
++                // existing behavior) are untouched.
++                if caret_row_is_rtl(map, selection.start) {
++                    let cursor = if selection.is_empty() {
++                        movement::right(map, selection.end)
++                    } else {
++                        selection.end
++                    };
++                    selection.collapse_to(cursor, SelectionGoal::None);
++                    return;
++                }
+                 let cursor = if selection.is_empty() {
+                     movement::left(map, selection.start)
+                 } else {
+@@ -16,13 +53,30 @@ impl Editor {
+ 
+     pub fn select_left(&mut self, _: &SelectLeft, window: &mut Window, cx: &mut Context<Self>) {
+         self.change_selections(Default::default(), window, cx, |s| {
+-            s.move_heads_with(&mut |map, head, _| (movement::left(map, head), SelectionGoal::None));
++            s.move_heads_with(&mut |map, head, _| {
++                // ZED-RTL: mirrored (see move_left).
++                if caret_row_is_rtl(map, head) {
++                    (movement::right(map, head), SelectionGoal::None)
++                } else {
++                    (movement::left(map, head), SelectionGoal::None)
++                }
++            });
+         })
+     }
+ 
+     pub fn move_right(&mut self, _: &MoveRight, window: &mut Window, cx: &mut Context<Self>) {
+         self.change_selections(Default::default(), window, cx, |s| {
+             s.move_with(&mut |map, selection| {
++                // ZED-RTL: mirrored (see move_left).
++                if caret_row_is_rtl(map, selection.end) {
++                    let cursor = if selection.is_empty() {
++                        movement::left(map, selection.start)
++                    } else {
++                        selection.start
++                    };
++                    selection.collapse_to(cursor, SelectionGoal::None);
++                    return;
++                }
+                 let cursor = if selection.is_empty() {
+                     movement::right(map, selection.end)
+                 } else {
+@@ -36,9 +90,14 @@ impl Editor {
+     pub fn select_right(&mut self, _: &SelectRight, window: &mut Window, cx: &mut Context<Self>) {
+         self.change_selections(Default::default(), window, cx, |s| {
+             s.move_heads_with(&mut |map, head, _| {
+-                (movement::right(map, head), SelectionGoal::None)
++                // ZED-RTL: mirrored (see move_left).
++                if caret_row_is_rtl(map, head) {
++                    (movement::left(map, head), SelectionGoal::None)
++                } else {
++                    (movement::right(map, head), SelectionGoal::None)
++                }
+             });
+-        });
++        })
+     }
+ 
+     pub fn move_up(&mut self, _: &MoveUp, window: &mut Window, cx: &mut Context<Self>) {

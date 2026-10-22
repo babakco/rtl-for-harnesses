@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+
+# Temp files from patcher
+*.tmp
+
+# App copies / patches (never commit these)
+Claude*.app/
+*.pre-rtl-backup/
+*.rtl-patched-*/

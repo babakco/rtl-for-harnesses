@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "builtAt": "2026-09-24T14:05:19.817Z",
+  "gitHead": "3c0daba0a5",
+  "flavor": {
+    "debug": false,
+    "pdfCompatibility": false,
+    "obfuscated": true,
+    "allExperiments": false,
+    "appFlavor": "stable",
+    "featureOverrides": "",
+    "features": {
+      "rcFiles": true,
+      "versionTrackingAnywhere": true,
+      "versionTrackingHistoryMerge": false
+    }
+  }
+}

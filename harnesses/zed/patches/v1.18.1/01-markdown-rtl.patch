@@ -1,0 +1,447 @@
+--- /dev/null
++++ b/crates/markdown/src/rtl.rs
+@@ -0,0 +1,67 @@
++// ZED-RTL: automatic right-to-left paragraph detection for the agent chat.
++//
++// Rule: if a rendered paragraph/line contains at least one RTL character
++// (Persian, Arabic, Hebrew, …) the whole line is right-aligned — even when
++// the first word is English. Pure LTR text keeps the default alignment.
++//
++// Code blocks are deliberately excluded by the caller (see `flush_text`):
++// source code must always stay left-aligned/LTR.
++
++/// Returns true if `text` contains at least one strongly RTL character.
++pub fn contains_rtl(text: &str) -> bool {
++    text.chars().any(is_rtl_char)
++}
++
++/// Returns true if `c` is a strongly RTL character.
++///
++/// Covered ranges:
++/// - `0590..=08FF` — Hebrew, Arabic (incl. Persian `0600..=06FF`), Syriac,
++///   Arabic Supplement, Arabic Extended-A
++/// - `FB50..=FDFF`, `FE70..=FEFF` — Arabic/Hebrew presentation forms
++///   (Persian ligatures such as ﻝﺍ live here)
++/// - `200F`, `202B`, `202E`, `2066..=2069` — explicit RTL marks/embeds
++pub fn is_rtl_char(c: char) -> bool {
++    matches!(c,
++        '\u{0590}'..='\u{08FF}'
++        | '\u{FB50}'..='\u{FDFF}'
++        | '\u{FE70}'..='\u{FEFF}'
++        | '\u{200F}'
++        | '\u{202B}'
++        | '\u{202E}'
++        | '\u{2066}'..='\u{2069}'
++    )
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn detects_persian_anywhere_in_line() {
++        assert!(contains_rtl("سلام دنیا"));
++        // English-first sentence with one Persian word -> still RTL.
++        assert!(contains_rtl("Hello, این یک تست است"));
++        assert!(contains_rtl("Zed is سریع است"));
++    }
++
++    #[test]
++    fn pure_ltr_is_not_rtl() {
++        assert!(!contains_rtl("Hello, world!"));
++        assert!(!contains_rtl("fn main() { println!(\"hi\"); }"));
++        assert!(!contains_rtl("12345 ?!..."));
++        assert!(!contains_rtl(""));
++    }
++
++    #[test]
++    fn arabic_hebrew_and_marks_count_as_rtl() {
++        assert!(contains_rtl("مرحبا")); // Arabic
++        assert!(contains_rtl("שלום")); // Hebrew
++        assert!(contains_rtl("abc\u{200F}")); // RLM
++    }
++
++    #[test]
++    fn code_with_rtl_string_stays_detectable_but_caller_excludes_code() {
++        // Detection itself is dumb on purpose; `flush_text` skips code blocks.
++        assert!(contains_rtl("let s = \"سلام\";"));
++    }
++}
+diff --git a/crates/markdown/src/markdown.rs b/crates/markdown/src/markdown.rs
+index 62368c5..b55eeb5 100644
+--- a/crates/markdown/src/markdown.rs
++++ b/crates/markdown/src/markdown.rs
+@@ -2,6 +2,7 @@ pub mod html;
+ mod mermaid;
+ pub mod parser;
+ mod path_range;
++pub mod rtl;
+ mod selection;
+ 
+ use base64::Engine as _;
+@@ -1917,6 +1918,14 @@ impl MarkdownElement {
+     }
+ 
+     fn pop_markdown_paragraph(&self, builder: &mut MarkdownElementBuilder) {
++        // ZED-RTL: right-align the whole paragraph block when it holds RTL
++        // text. This moves the glyphs (layout reads the ambient div style);
++        // `flush_text` already fixed the line metadata for selection/hit-test.
++        // `pr_4` mirrors the root `pl_4`: without right padding the first
++        // ~1.5 glyphs would touch (or slide under) the right edge glyphs.
++        if builder.effective_block_align() == TextAlign::Right {
++            builder.modify_current_div(|el| el.text_right().pr_4());
++        }
+         builder.pop_div();
+         builder.pop_text_style();
+     }
+@@ -1956,6 +1965,10 @@ impl MarkdownElement {
+     }
+ 
+     fn pop_markdown_heading(&self, builder: &mut MarkdownElementBuilder) {
++        // ZED-RTL: same block-level fix as paragraphs (see above).
++        if builder.effective_block_align() == TextAlign::Right {
++            builder.modify_current_div(|el| el.text_right().pr_4());
++        }
+         builder.pop_div();
+         builder.pop_text_style();
+     }
+@@ -3591,6 +3604,9 @@ struct MarkdownElementBuilder {
+     syntax_theme: Arc<SyntaxTheme>,
+     highlights: MarkdownHighlights,
+     code_chip_corner_radius: Pixels,
++    // ZED-RTL: per-div RTL flags, kept in sync with `div_stack`
++    // (pushed by `push_div`, popped+merged by `pop_div`).
++    block_rtl_stack: Vec<bool>,
+ }
+ 
+ struct MarkdownHighlights {
+@@ -3712,6 +3728,27 @@ impl MarkdownElementBuilder {
+             syntax_theme,
+             highlights,
+             code_chip_corner_radius,
++            // Mirrors the initial root div pushed into `div_stack` above.
++            block_rtl_stack: vec![false],
++        }
++    }
++
++    /// ZED-RTL: true when the current block holds at least one RTL character
++    /// (Persian/Arabic/Hebrew), counting both flushed and still-pending text.
++    fn current_block_rtl(&self) -> bool {
++        self.block_rtl_stack.last().copied().unwrap_or(false)
++            || rtl::contains_rtl(&self.pending_line.text)
++    }
++
++    /// ZED-RTL: effective alignment for the current block — explicit
++    /// center/right (e.g. table cells) always wins; a Left block containing
++    /// RTL text flips to Right.
++    fn effective_block_align(&self) -> TextAlign {
++        let align = self.text_style().text_align;
++        if align == TextAlign::Left && self.current_block_rtl() {
++            TextAlign::Right
++        } else {
++            align
+         }
+     }
+ 
+@@ -3779,6 +3816,8 @@ impl MarkdownElementBuilder {
+         }
+ 
+         self.div_stack.push(DivStackEntry::new(div));
++        // ZED-RTL: a fresh block starts with no RTL content seen yet.
++        self.block_rtl_stack.push(false);
+     }
+ 
+     fn push_root_block(&mut self, range: &Range<usize>, markdown_end: usize) {
+@@ -3863,6 +3902,13 @@ impl MarkdownElementBuilder {
+     fn pop_div(&mut self) {
+         self.flush_text();
+         let div = self.div_stack.pop().unwrap().div.into_any_element();
++        // ZED-RTL: keep `block_rtl_stack` in sync; propagate a nested RTL
++        // block upward (harmless — only paragraph/heading pops act on it).
++        if self.block_rtl_stack.pop() == Some(true)
++            && let Some(parent) = self.block_rtl_stack.last_mut()
++        {
++            *parent = true;
++        }
+         self.append_child(div);
+     }
+ 
+@@ -3935,6 +3981,14 @@ impl MarkdownElementBuilder {
+         self.pending_line.text.push_str(text);
+         self.current_source_index = source_range.end;
+ 
++        // ZED-RTL: remember RTL content for the block-level alignment fix
++        // applied when the enclosing paragraph/heading is popped.
++        if !self.block_rtl_stack.last().copied().unwrap_or(true) && rtl::contains_rtl(text) {
++            if let Some(top) = self.block_rtl_stack.last_mut() {
++                *top = true;
++            }
++        }
++
+         // Compute the base text style once
+         let text_style = self.text_style();
+ 
+@@ -4022,7 +4076,8 @@ impl MarkdownElementBuilder {
+         };
+ 
+         let mut checkbox_container = h_flex().w_full();
+-        checkbox_container = match self.text_style().text_align {
++        // ZED-RTL: follow the effective block alignment (RTL-aware).
++        checkbox_container = match self.effective_block_align() {
+             TextAlign::Left => checkbox_container.justify_start(),
+             TextAlign::Center => checkbox_container.justify_center(),
+             TextAlign::Right => checkbox_container.justify_end(),
+@@ -4063,12 +4118,21 @@ impl MarkdownElementBuilder {
+     }
+ 
+     fn flush_text(&mut self) {
+-        let text_align = self.text_style().text_align;
+         let line = mem::take(&mut self.pending_line);
+         if line.text.is_empty() {
+             return;
+         }
+ 
++        // ZED-RTL: right-align any rendered line that contains at least one
++        // RTL character (e.g. Persian), even if it starts with English.
++        // Explicit center/right alignment (e.g. from table cells) is kept,
++        // and code blocks always stay left-aligned.
++        let in_code_block = self.code_block_stack.last().is_some();
++        let mut text_align = self.text_style().text_align;
++        if !in_code_block && text_align == TextAlign::Left && rtl::contains_rtl(&line.text) {
++            text_align = TextAlign::Right;
++        }
++
+         let highlights = line
+             .source_mappings
+             .first()
+@@ -4337,22 +4401,69 @@ impl RenderedLine {
+             let unwrapped_layout = &wrapped_line.unwrapped_layout;
+             let wrapped_line_start = wrapped_line_segment.start;
+             let wrapped_line_end = wrapped_line_segment.end;
+-            let mut row_top = wrapped_line_segment.row_top;
+-
+-            let row_ends = wrapped_line
+-                .wrap_boundaries()
+-                .iter()
+-                .map(|wrap_boundary| {
+-                    let glyph =
+-                        &unwrapped_layout.runs[wrap_boundary.run_ix].glyphs[wrap_boundary.glyph_ix];
+-                    (wrapped_line_start + glyph.index, glyph.position.x)
+-                })
+-                .chain([(wrapped_line_end, unwrapped_layout.width)]);
++            let base_row_top = wrapped_line_segment.row_top;
+ 
+-            let mut row_start = wrapped_line_start;
+-            let mut row_start_x = Pixels::ZERO;
+-
+-            for (row_end, row_end_x) in row_ends {
++            // Collect rows in vec-chunk order: x extents follow the legacy
++            // cumulative chain (exactly what `paint_line` uses), logical
++            // spans are TRUE min/max spans (correct for visual-RTL vecs too).
++            let true_spans = wrapped_line.chunk_logical_spans();
++            let mut rows: SmallVec<[(usize, usize, Pixels, Pixels); 4]> = SmallVec::new();
++            {
++                // Legacy x chain (paint-exact).
++                let mut xs: SmallVec<[(Pixels, Pixels); 4]> = SmallVec::new();
++                {
++                    let row_ends = wrapped_line.wrap_boundaries().iter().map(|b| {
++                        unwrapped_layout.runs[b.run_ix].glyphs[b.glyph_ix].position.x
++                    });
++                    let mut sx = Pixels::ZERO;
++                    for ex in row_ends.chain([unwrapped_layout.width].into_iter()) {
++                        xs.push((sx, ex));
++                        sx = ex;
++                    }
++                }
++                for (k, (sx, ex)) in xs.into_iter().enumerate() {
++                    let (slo, shi) = true_spans.get(k).copied().unwrap_or((
++                        wrapped_line_start,
++                        wrapped_line_start,
++                    ));
++                    rows.push((
++                        wrapped_line_start + slo.min(shi),
++                        wrapped_line_start + slo.max(shi),
++                        sx,
++                        ex,
++                    ));
++                }
++            }
++            // ...then emit top-down. ZED-RTL: rows of visual-RTL text paint
++            // bottom-up (see `paint_line`), so emit chunks in reverse. LTR
++            // order is untouched.
++            let flip_rows = wrapped_line.is_visual_rtl() && rows.len() > 1;
++            let mut row_top = base_row_top;
++            let emit: SmallVec<[(usize, usize, Pixels, Pixels); 4]> = if flip_rows {
++                rows.into_iter().rev().collect()
++            } else {
++                // Legacy path: recompute cumulative spans exactly as before
++                // (byte-identical behavior for LTR).
++                let mut legacy: SmallVec<[(usize, usize, Pixels, Pixels); 4]> =
++                    SmallVec::new();
++                {
++                    let row_ends = wrapped_line.wrap_boundaries().iter().map(|b| {
++                        let glyph = &unwrapped_layout.runs[b.run_ix].glyphs[b.glyph_ix];
++                        (wrapped_line_start + glyph.index, glyph.position.x)
++                    });
++                    let mut row_start = wrapped_line_start;
++                    let mut row_start_x = Pixels::ZERO;
++                    for (row_end, row_end_x) in
++                        row_ends.chain([(wrapped_line_end, unwrapped_layout.width)].into_iter())
++                    {
++                        legacy.push((row_start, row_end, row_start_x, row_end_x));
++                        row_start = row_end;
++                        row_start_x = row_end_x;
++                    }
++                }
++                legacy
++            };
++            for (row_start, row_end, row_start_x, row_end_x) in emit {
+                 let selection_start = rendered_start.max(row_start);
+                 let selection_end = rendered_end.min(row_end);
+ 
+@@ -4374,8 +4485,6 @@ impl RenderedLine {
+                     ));
+                 }
+ 
+-                row_start = row_end;
+-                row_start_x = row_end_x;
+                 row_top += line_height;
+             }
+         }
+@@ -4472,8 +4581,15 @@ impl RenderedLine {
+             let bounds = self.layout.bounds();
+             let line_height = self.layout.line_height();
+             let relative_y = (position.y - bounds.top()).max(px(0.));
+-            let wrapped_row_ix = (relative_y / line_height) as usize;
++            let mut wrapped_row_ix = (relative_y / line_height) as usize;
+             let boundaries = wrapped_line.wrap_boundaries();
++            // ZED-RTL: rows of visual-RTL text paint bottom-up (see
++            // `paint_line`), so map the visual row back to its vec chunk.
++            // Out-of-range rows keep legacy behavior.
++            let row_count = boundaries.len() + 1;
++            if wrapped_line.is_visual_rtl() && wrapped_row_ix < row_count {
++                wrapped_row_ix = row_count - 1 - wrapped_row_ix;
++            }
+ 
+             let segment_start_x = if wrapped_row_ix == 0 {
+                 px(0.)
+@@ -5048,6 +5164,118 @@ mod tests {
+         render_markdown_with_language_registry(markdown, None, cx)
+     }
+ 
++    // TEMPORARY ZED-RTL row-order probe (not part of the patch).
++    #[gpui::test]
++    fn zed_rtl_tmp_row_order(cx: &mut TestAppContext) {
++        ensure_theme_initialized(cx);
++        struct MeasureView {
++            markdown: Entity<Markdown>,
++            captured: Rc<RefCell<Option<RenderedText>>>,
++        }
++        impl Render for MeasureView {
++            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
++                let captured = self.captured.clone();
++                div().size_full().child(
++                    MarkdownElement::new(self.markdown.clone(), MarkdownStyle::default())
++                        .on_render(move |text| {
++                            *captured.borrow_mut() = Some(text);
++                        }),
++                )
++            }
++        }
++
++        // Narrow window to force wrapping like the agent panel.
++        let source = "سلام! چطور می‌توانم کمکتان کنم؟ آیا می‌خواهید درباره هر یک از مشکلاتی که شناسایی کردم بیشتر صحبت کنیم، یا روی یک بخش خاص کد کار می‌کنیم؟";
++        let captured: Rc<RefCell<Option<RenderedText>>> = Rc::new(RefCell::new(None));
++        let captured2 = captured.clone();
++        let window = cx.open_window(size(px(500.), px(600.)), |_, cx| {
++            let markdown = cx.new(|cx| Markdown::new(source.into(), None, None, cx));
++            MeasureView {
++                markdown,
++                captured: captured2,
++            }
++        });
++        cx.run_until_parked();
++        let _ = gpui::VisualTestContext::from_window(window.into(), cx);
++        cx.run_until_parked();
++        let text = captured.borrow().clone().expect("should render");
++        for (ix, line) in text.lines.iter().enumerate() {
++            let Some(wrapped) = line.layout.line_layout_for_index(0) else {
++                continue;
++            };
++            // Visual rows top-to-bottom with their logical index spans.
++            let mut bounds: Vec<(usize, usize)> = vec![(usize::MAX, 0)];
++            for run in wrapped.runs().iter() {
++                for g in run.glyphs.iter() {
++                    // assign glyph to row by x within wrap segments is complex;
++                    // instead print first few glyphs with their row via boundaries below.
++                    let _ = g;
++                }
++            }
++            // Simpler: for each wrap segment, find min/max logical index of its glyphs.
++            let unwrapped = &wrapped.unwrapped_layout;
++            let mut cuts: Vec<usize> = vec![0];
++            for b in wrapped.wrap_boundaries().iter() {
++                // glyph position order == paint order; map to logical via index list
++                let _ = b;
++                cuts.push(0);
++            }
++            let _ = (bounds, cuts);
++            // Direct approach: walk glyphs in paint order, split rows at boundaries,
++            // print logical index sequence per visual row (first 12 + last 4).
++            let glyphs: Vec<(usize, f32)> = wrapped
++                .runs()
++                .iter()
++                .flat_map(|r| r.glyphs.iter().map(|g| (g.index, f32::from(g.position.x))))
++                .collect();
++            // boundaries as positions in the glyph vec
++            let mut bpos: Vec<usize> = vec![0];
++            for b in wrapped.wrap_boundaries().iter() {
++                // find glyph vec position of (run_ix, glyph_ix)
++                let mut count = 0;
++                for (ri, r) in wrapped.runs().iter().enumerate() {
++                    if ri < b.run_ix {
++                        count += r.glyphs.len();
++                    } else if ri == b.run_ix {
++                        count += b.glyph_ix;
++                        break;
++                    } else {
++                        break;
++                    }
++                }
++                bpos.push(count);
++            }
++            bpos.push(glyphs.len());
++            println!("line {ix}: align={:?} rows={}", line.text_align, bpos.len() - 1);
++            for w in 0..bpos.len() - 1 {
++                let seq: Vec<usize> = glyphs[bpos[w]..bpos[w + 1]].iter().map(|(i, _)| *i).collect();
++                let head: Vec<usize> = seq.iter().take(8).copied().collect();
++                let tail: Vec<usize> = seq.iter().rev().take(4).copied().collect();
++                // decode head/tail words from source for readability
++                let word_at = |byte_ix: usize| -> String {
++                    let s = source.as_bytes();
++                    let mut a = byte_ix.min(s.len());
++                    while a > 0 && s[a - 1] != b' ' {
++                        a -= 1;
++                    }
++                    let mut z = byte_ix.min(s.len());
++                    while z < s.len() && s[z] != b' ' {
++                        z += 1;
++                    }
++                    String::from_utf8_lossy(&s[a..z]).into_owned()
++                };
++                let first_word = head.first().map(|i| word_at(*i)).unwrap_or_default();
++                let last_word = tail.first().map(|i| word_at(*i)).unwrap_or_default();
++                println!(
++                    "  visual row {w}: {} glyphs logical_min={} logical_max={} first_word~{first_word:?} last_word~{last_word:?}",
++                    seq.len(),
++                    seq.iter().min().copied().unwrap_or(0),
++                    seq.iter().max().copied().unwrap_or(0),
++                );
++            }
++        }
++    }
++
+     #[gpui::test]
+     fn test_active_search_highlight_uses_match_index(cx: &mut TestAppContext) {
+         let markdown = cx.new(|cx| Markdown::new("zero one two".into(), None, None, cx));

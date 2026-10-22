@@ -1,0 +1,32 @@
+# ARCHITECTURE
+
+این سند ساختار `asar` و نقاط تزریق و جریان `payload` را دقیق ثبت می‌کند. بدنه فارسی است و همهٔ مسیرها و فرمان‌ها و شناسه‌ها و مقدارها انگلیسی و عین مقدار واقعی‌اند.
+
+## Asar layout
+
+اپ مبدأ `/Applications/ChatGPT.app` فورک `Chromium` به نام `Owl` است نه `Electron` استوک: `NSPrincipalClass` مقدار `BrowserCrApplication` است، فریمورک `Codex Framework.framework` است و مسیر باینری فریمورک `Contents/Frameworks/Codex Framework.framework/Codex Framework` است. هیچ `fuse` مربوط به `Electron` در باینری `Contents/MacOS/ChatGPT` نیست.
+
+مشخصات ثبت‌شده: `CFBundleIdentifier` مقدار `com.openai.codex`، `CFBundleShortVersionString` مقدار `26.1002.52244`، `CFBundleVersion` مقدار `13536`، فایل `Contents/Resources/app.asar` با اندازهٔ `561986445` بایت، دایرکتوری `Contents/Resources/app.asar.unpacked` فقط برای ماژول‌های `native` شامل `better-sqlite3` و `node-pty` و `objc-js` و `@worklouder` است. ریشه‌های داخل `asar` شامل `/.vite` و `/node_modules` و `/webview` و `/native-menu-locales` و `package.json` است.
+
+دو مُهر یکپارچگی وجود دارد و هر دو باید با هم به‌روز شوند. مُهر اول هش `ElectronAsarIntegrity` در `Contents/Info.plist` است که `SHA256` بایت‌های `HEADER` فایل `app.asar` است نه کل فایل؛ مقدار قدیمی ثبت‌شده `b0d442ed63026a266e9f86df139bcafb9dcafe628b7065ea0473fe82760a82f0` و هش کل فایل `40efd7acdf03a24817fcd7f35684fc2173b154df06774243cb4ab227e36fa915` است. مُهر دوم شکاف داخل باینری فریمورک در بخش `__DATA_CONST,__asar_integrity` با نگهبان `AGbevlPCksUGKNL8TSn7wGmJEuJsXb2A` است که مقدار `sha256("Resources/app.asar"+"SHA256"+headerHash)` را نگه می‌دارد و با `asarIntegrityDigest` و `patchFrameworkIntegritySlot` در `tools/sign.mjs` وصله می‌شود. اگر فقط یکی به‌روز شود، اپ با `FATAL .../asar/archive.cc:240 Failed to get integrity for validatable asar archive` می‌میرد.
+
+ترتیب ساخت در `patch-codex-rtl.sh` ثابت است: `preflight` سپس `cp -R` و `xattr -cr` سپس بازتولید `payload/codex-rtl.css` با `tools/build-css.mjs` و `payload/codex-rtl.js` با `tools/build-payload.mjs` سپس `npx --yes @electron/asar extract` به `staging` سپس کپی دو دارایی به `webview/assets` سپس `inject` هر دو `HTML` با معنای `force` سپس اشتقاق `unpack` با `deriveUnpackGlobs` از `find .../app.asar.unpacked -type f` و ساخت عبارت `**/{...}` سپس `npx --yes @electron/asar pack --unpack` سپس `verifyRepackInvariant` سپس `asarHeaderHash` و `updateAsarHash` و `patchFrameworkIntegritySlot` سپس نوشتن `Contents/.codex-rtl-patch.json` با فیلدهای `sourceVersion` و `sourceBuild` و `asarSha256Before` و `asarSha256After` و `patchedAt` و `payloadSha256` قبل از `codesign` سپس `strip` با `prepareEntitlements` و `codesign --force --deep --options runtime --sign -` و `codesign --verify --deep --strict` سپس کنترل `version changed during patch, aborting` و ساخت `ln -sfn` به `/Applications/ChatGPT RTL.app`.
+
+## Injection points
+
+فقط دو ورودی تزریق می‌شوند: `/webview/index.html` با اندازهٔ `14803` و `/webview/detached-window.html` با اندازهٔ `2847`. لنگر تزریق دقیقاً آخرین `</head>` است. بلوک تزریقی `INJECTED_BLOCK` با طول `158` بایت از `injectionByteLength()` دقیقاً دو خط `<script type="module" src="./assets/codex-rtl.js"></script>` و `<link rel="stylesheet" href="./assets/codex-rtl.css">` را داخل `<!--CODEX-RTL:START-->` و `<!--CODEX-RTL:END-->` قرار می‌دهد. توابع `injectHtml` و `stripMarkers` و `hasMarkers` و `injectHtmlWithDelta` در `tools/inject.mjs` این قرارداد را پیاده می‌کنند؛ بدون `force` و با نشان، ورودی عیناً برمی‌گردد و با `force` ابتدا ناحیهٔ قبلی پاک و یک بلوک تازه درج می‌شود.
+
+دو فایل جدید به `asar` افزوده می‌شوند: `/webview/assets/codex-rtl.js` و `/webview/assets/codex-rtl.css`. مسیر دارایی‌ها نسبی `./assets/…` است. `verifyRepackInvariant` در `tools/repack.mjs` با `ALLOWED_DIFFERENCES` دقیقاً همین دو دارایی جدید و رشد همین دو `HTML` به اندازهٔ دلتای تزریق را می‌پذیرد و هر تغییر دیگر در مجموعهٔ مسیرها یا پرچم `unpacked` یا اندازه را رد می‌کند.
+
+## Payload flow
+
+`payload/rtl-detect.mjs` سه تابع خالص `hasRTLChar` و `hasRTL` و `detectDir` را دارد با بازه‌های `U+0590–05FF` و `U+0600–06FF` و `U+0750–077F` و `U+08A0–08FF` و `U+FB50–FDFF` و `U+FE70–FEFF` به‌همراه `U+200C`. قاعده `contains-any` است: هر بلوک با دست‌کم یک کاراکتر `RTL` مقدار `dir rtl` می‌گیرد حتی اگر با لاتین یا نقطه‌گذاری شروع شده باشد؛ رشتهٔ خالی `ltr` است.
+
+`payload/rtl-dom.js` قطعهٔ بدون `import` و `export` با `isExcluded` و `processTextNode` و `findBlock` و `scanRoot` و `handleInput` و حلقهٔ `MutationObserver` دسته‌ای با `CODEX_RTL_BATCH_MS` مقدار `50` و سقف `CODEX_RTL_MAX_ROOTS` مقدار `200` است. `findBlock` از `SPAN` اینلاین عبور می‌کند و به نزدیک‌ترین بلوک (`P`/`DIV`/...) می‌رسد، و اگر بلوکی نباشد به همان عنصر برمی‌گردد؛ `scanRoot` هرگز روی `HTML`/`HEAD`/`BODY` مقدار `dir` نمی‌گذارد تا کروم اپ فلیپ نشود، و ریشه‌های `shadow` کشف‌شده را هم اسکن و `observe` می‌کند. `isExcluded` برای `PRE` و `CODE` و `KBD` و `SAMP` و `BUTTON` و `A` و `INPUT` و `TEXTAREA` و `SELECT` و `SVG` و `MATH` و سلکتورهای `.katex` و `mjx-container` و `[role=button]` و `[class*=icon]` و `[class*=language-]` مقدار درست برمی‌گرداند.
+
+`tools/build-payload.mjs` با `buildPayload` هر دو قطعه را به ترتیب `detect` سپس `dom` داخل یک `IIFE` با `'use strict'` الحاق می‌کند که نخستین جملهٔ `init` آن `document.documentElement.dataset.codexRtl = "1"` داخل `try` است. همین هوک `codexRtl` اثبات اجرای واقعی است: در راستی‌آزمایی زنده، رندرر اصلی `app://-/index.html` و اورلی و `detached` هر سه `dataset.codexRtl="1"` را گزارش کردند؛ پاراگراف فارسی `dir rtl`، پاراگراف خالص انگلیسی بدون `dir` با محاسبهٔ `ltr`، `pre` فارسی `ltr` با `monospace`، پاراگراف فارسی با `code` درون‌خطی به‌صورت پاراگراف `rtl` و `code` به‌صورت `ltr`، فونت `p` شامل `Vazirmatn` و کد با `ui-monospace` و غیر `Vazirmatn` ماند.
+
+`tools/build-css.mjs` با `fontFaceBlock` و `buildCss` هر سه وزن `400` و `500` و `700` را به‌صورت `src:url(data:font/woff2;base64,...)` جاسازی می‌کند چون `font-src 'self' data:` مقدار `data:` را مجاز می‌داند. قانون متن فقط `font-family` است و عمداً `unicode-bidi: plaintext` ندارد، چون `plaintext` جهت را از اولین کاراکتر قوی می‌گیرد و پاراگراف فارسیِ شروع‌شونده با لاتین (مثل `OpenCode ...`) را `LTR` می‌کرد؛ جهت را صفت `dir=rtl` (که `JS` می‌گذارد) تعیین می‌کند و قانون `[dir="rtl"]{direction:rtl;text-align:right;}` آن را اجرا می‌کند. `pre,code` مقدار `direction:ltr` و `unicode-bidi:isolate` دارند و قانون `ui-monospace` آخرین قانون فونت با همان `specificity` است تا برنده شود.
+---
+
+توسعه‌دهنده: **Mehdi Ravanbakhsh** — [AUTHORS.md](../../../AUTHORS.md)
