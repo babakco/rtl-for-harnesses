@@ -25,13 +25,18 @@ echo "==> [2/3] Syntax check (node --check)..."
 node --check "$PAYLOAD_BUILT" && echo "    JS syntax OK"
 node --check "$PAYLOAD_SRC" && echo "    JS template syntax OK"
 
-echo "==> [3/3] Compiling injector dylib (clang, arm64)..."
+echo "==> [3/3] Compiling injector dylib (clang)..."
 MIN_MACOS="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
-clang -dynamiclib -O2 -arch arm64 \
+ARCH="${RTL_ARCH:-$(uname -m)}"
+case "$ARCH" in
+  arm64|x86_64) ;;
+  *) echo "ERROR: unsupported architecture: $ARCH (use arm64 or x86_64)"; exit 1 ;;
+esac
+clang -dynamiclib -O2 -arch "$ARCH" \
   -mmacosx-version-min="$MIN_MACOS" \
   -install_name "@loader_path/copilot_rtl_inject.dylib" \
   -framework Foundation -framework WebKit \
   -o "$DYLIB" "$DIR/injector/copilot_rtl_inject.m"
-echo "    dylib: $DYLIB"
+echo "    dylib: $DYLIB ($ARCH)"
 file "$DYLIB"
 echo "==> BUILD DONE"
