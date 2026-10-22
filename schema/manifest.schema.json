@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/rtl-for-harnesses/manifest.schema.json",
+  "title": "RTL for AI Harnesses manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "harnesses"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "harnesses": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/harness" }
+    }
+  },
+  "$defs": {
+    "argv": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "nullableString": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "null" }
+      ]
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "label", "required"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "required": { "type": "boolean" }
+      }
+    },
+    "harness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slug",
+        "name",
+        "vendor",
+        "appPath",
+        "appBundleId",
+        "outputBundleId",
+        "outputPath",
+        "additionalOutputs",
+        "method",
+        "profile",
+        "inPlace",
+        "requires",
+        "testedVersion",
+        "lastVerifiedVersion",
+        "cwd",
+        "entry",
+        "verify",
+        "tests",
+        "restore",
+        "docs",
+        "notes"
+      ],
+      "properties": {
+        "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "name": { "type": "string", "minLength": 1 },
+        "vendor": { "type": "string", "minLength": 1 },
+        "appPath": { "type": "string", "minLength": 1 },
+        "appBundleId": { "type": "string", "pattern": "^[A-Za-z0-9.-]+$" },
+        "outputBundleId": { "type": "string", "pattern": "^[A-Za-z0-9.-]+$" },
+        "outputPath": { "type": "string", "minLength": 1 },
+        "additionalOutputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/output" }
+        },
+        "method": {
+          "enum": [
+            "electron-asar",
+            "electron-asar-preload",
+            "electron-asar-surgical",
+            "electron-asar-framework",
+            "tauri-source",
+            "native-source-rust",
+            "webkit-dylib"
+          ]
+        },
+        "profile": { "enum": ["separate", "shared"] },
+        "inPlace": { "type": "boolean" },
+        "requires": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "node",
+              "npx",
+              "python3",
+              "clang",
+              "cargo",
+              "rustc",
+              "bun",
+              "git",
+              "xcodebuild",
+              "curl",
+              "rsync",
+              "ditto",
+              "codesign",
+              "plutil"
+            ]
+          }
+        },
+        "testedVersion": { "$ref": "#/$defs/nullableString" },
+        "lastVerifiedVersion": { "$ref": "#/$defs/nullableString" },
+        "cwd": {
+          "type": "string",
+          "pattern": "^harnesses/[a-z0-9][a-z0-9-]*$"
+        },
+        "entry": { "$ref": "#/$defs/argv" },
+        "verify": { "$ref": "#/$defs/argv" },
+        "tests": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "restore": {
+          "oneOf": [
+            { "$ref": "#/$defs/argv" },
+            { "type": "null" }
+          ]
+        },
+        "docs": {
+          "type": "string",
+          "pattern": "^harnesses/[a-z0-9][a-z0-9-]*/README\\.md$"
+        },
+        "notes": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
